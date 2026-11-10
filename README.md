@@ -2,11 +2,11 @@
 
 Local web console for the WebView registration flow — brand purple + turquoise theme, left sidebar,
 panel cards, env footer. Python stdlib only, **no pip installs**.
-
+ 
 ```
 Affiliate (Burger King | iKuka)   ×   WebView version (V1 | V2)   ×   Step
 ```
-
+s
 | Module | Endpoint | Status |
 |--------|----------|--------|
 | User Registration | `/web-view/api/v1/user/registration` | **working** — verified on BK V1 + V2 |
