@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($c = New-Object System.Net.Sockets.TcpClient; $r = $c.BeginConnect\\(\"10.30.210.153\", 15890, $null, $null\\); if \\($r.AsyncWaitHandle.WaitOne\\(4000, $false\\) -and $c.Connected\\) { \"TCP 10.30.210.153:15890 -> REACHABLE\" } else { \"TCP 10.30.210.153:15890 -> NOT reachable \\(VPN / network required\\)\" }; $c.Close\\(\\))",
+      "PowerShell(Start-Process -FilePath \"python\" -ArgumentList \"-X\",\"utf8\",\"app.py\" -WorkingDirectory \"D:\\\\Project Claude\\\\KonaPlateWebview\")",
+      "PowerShell(Get-Process python -ErrorAction SilentlyContinue)",
+      "PowerShell(python -I -X utf8 \"C:\\\\Users\\\\BADRUN~1.NAH\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\35bd0c31db856a90\\\\490cf457-b6c4-4b4a-abe9-4211b345d970\\\\scratchpad\\\\api_test.py\")",
+      "PowerShell(Start-Process \"http://127.0.0.1:8770\")",
+      "PowerShell(python -I -X utf8 \"C:\\\\Users\\\\BADRUN~1.NAH\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\35bd0c31db856a90\\\\490cf457-b6c4-4b4a-abe9-4211b345d970\\\\scratchpad\\\\run_bk.py\")",
+      "PowerShell(python -I -X utf8 \"C:\\\\Users\\\\BADRUN~1.NAH\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\35bd0c31db856a90\\\\490cf457-b6c4-4b4a-abe9-4211b345d970\\\\scratchpad\\\\run_flow.py\")",
+      "PowerShell(python -I -X utf8 \"C:\\\\Users\\\\BADRUN~1.NAH\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\35bd0c31db856a90\\\\490cf457-b6c4-4b4a-abe9-4211b345d970\\\\scratchpad\\\\run_flow4.py\")"
+    ]
+  }
+}

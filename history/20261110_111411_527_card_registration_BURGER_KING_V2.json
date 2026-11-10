@@ -1,0 +1,54 @@
+{
+  "timestamp": "2026-11-10T11:14:11",
+  "feature": "card_registration",
+  "target": "BURGER_KING",
+  "version": "V2",
+  "affiliate": "Burger King",
+  "request": {
+    "url": "http://10.30.210.153:15890/web-view/api/v1/prepay-card/physical/register",
+    "method": "POST",
+    "headers": {
+      "X-KM-User-AspId": "000187000000000",
+      "X-KM-Correlation-Id": "261110111410-2753614",
+      "X-KM-Access-Key": "6167e69-a0f12213a45e2d9ce47cc3c9a6623696",
+      "X-KM-Tran-Time": "20261110111358",
+      "X-KM-Time-Zone": "KST",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "cardApplyNo": "CA20261110141356599668",
+      "userId": 50001168694,
+      "physicalCardNo": "1110110900830102",
+      "physicalCardExpDate": "3504",
+      "physicalCardCVC": "763",
+      "tcList": [],
+      "extMobileCardPar": "Q1A1B9A730F1E868869C3E7EE09"
+    }
+  },
+  "response": {
+    "status": 200,
+    "reason": "OK",
+    "headers": {
+      "X-KM-Response-Count": "1",
+      "X-KM-User-MpaId": "17917938343808435867341060323756",
+      "X-KM-UserId": "50001168694",
+      "X-KM-Request-Count": "1",
+      "Date": "Tue, 10 Nov 2026 05:14:11 GMT",
+      "X-KM-Correlation-Id": "261110111410-2753614",
+      "X-KM-User-AspId": "000187000000000",
+      "Content-Type": "application/json;charset=UTF-8",
+      "X-KM-UserName": "mh7058@naver.com",
+      "Content-Length": "87",
+      "connection": "close"
+    },
+    "body": {
+      "mobileCardNo": null,
+      "par": null,
+      "response": {
+        "code": "000_000",
+        "description": "Success."
+      }
+    },
+    "elapsedMs": 1515
+  }
+}

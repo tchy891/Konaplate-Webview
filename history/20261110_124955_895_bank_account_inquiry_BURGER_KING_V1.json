@@ -1,0 +1,59 @@
+{
+  "timestamp": "2026-11-10T12:49:55",
+  "feature": "bank_account_inquiry",
+  "target": "BURGER_KING",
+  "version": "V1",
+  "affiliate": "Burger King",
+  "request": {
+    "url": "http://10.30.210.153:15890/web-view/api/v1/bankaccounts/inquiry",
+    "method": "POST",
+    "headers": {
+      "X-KM-User-AspId": "000187000000000",
+      "X-KM-Correlation-Id": "261110124955-4275923",
+      "X-KM-Access-Key": "6167e69-bb878da6f6afcf06902427c1e752ecc4",
+      "X-KM-Tran-Time": "20261110124955",
+      "X-KM-Time-Zone": "KST",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "userId": 50001168724
+    }
+  },
+  "response": {
+    "status": 200,
+    "reason": "OK",
+    "headers": {
+      "X-KM-Response-Count": "1",
+      "X-KM-User-MpaId": "",
+      "X-KM-UserId": "",
+      "X-KM-Request-Count": "1",
+      "Date": "Tue, 10 Nov 2026 06:49:55 GMT",
+      "X-KM-Correlation-Id": "261110124955-4275923",
+      "X-KM-User-AspId": "000187000000000",
+      "Content-Type": "application/json;charset=UTF-8",
+      "X-KM-UserName": "",
+      "Content-Length": "345",
+      "connection": "close"
+    },
+    "body": {
+      "bankAccForNormalRcg": {
+        "bankCode": "020",
+        "bankAccount": "1002041963212",
+        "bankName": "우리은행"
+      },
+      "bankAccForAutoRcg": {
+        "bankCode": "020",
+        "bankAccount": "1002041963212",
+        "bankName": "우리은행"
+      },
+      "bankAccForAccTransferPay": null,
+      "isAutoRcgAccRegAllowed": false,
+      "isAccTransferPayRegAllowed": true,
+      "response": {
+        "code": "000_000",
+        "description": "Success."
+      }
+    },
+    "elapsedMs": 303
+  }
+}

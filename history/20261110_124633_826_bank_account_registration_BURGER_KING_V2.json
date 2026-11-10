@@ -1,0 +1,56 @@
+{
+  "timestamp": "2026-11-10T12:46:33",
+  "feature": "bank_account_registration",
+  "target": "BURGER_KING",
+  "version": "V2",
+  "affiliate": "Burger King",
+  "request": {
+    "url": "http://10.30.210.153:15890/web-view/api/v1/bankaccounts/ars/register",
+    "method": "POST",
+    "headers": {
+      "X-KM-User-AspId": "000187000000000",
+      "X-KM-Correlation-Id": "261110124633-0038377",
+      "X-KM-Access-Key": "6167e69-a0f12213a45e2d9ce47cc3c9a6623696",
+      "X-KM-Tran-Time": "20261110124633",
+      "X-KM-Time-Zone": "KST",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "userId": 50001168720,
+      "bankAccount": "1002041963212",
+      "bankCode": "020",
+      "bankName": "우리은행",
+      "userName": "기충종",
+      "birthDate": "19920211",
+      "langCode": "ko",
+      "userType": "NORMAL",
+      "creationType": "FACE"
+    }
+  },
+  "response": {
+    "status": 200,
+    "reason": "OK",
+    "headers": {
+      "X-KM-Response-Count": "1",
+      "X-KM-User-MpaId": "17508391999605360084545751873627",
+      "X-KM-UserId": "50001163372",
+      "X-KM-Request-Count": "1",
+      "Date": "Tue, 10 Nov 2026 06:46:33 GMT",
+      "X-KM-Correlation-Id": "261110124633-0038377",
+      "X-KM-User-AspId": "000187000000000",
+      "Content-Type": "application/json;charset=UTF-8",
+      "X-KM-UserName": "50001163372",
+      "Content-Length": "121",
+      "connection": "close"
+    },
+    "body": {
+      "bankAccRegNo": "AR20261110154633307047",
+      "response": {
+        "code": "000_000",
+        "description": "Success.",
+        "detailDescription": null
+      }
+    },
+    "elapsedMs": 356
+  }
+}

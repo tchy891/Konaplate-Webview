@@ -1,0 +1,47 @@
+{
+  "timestamp": "2026-11-09T16:01:17",
+  "feature": "card_registration",
+  "target": "BURGER_KING",
+  "version": "V1",
+  "affiliate": "Burger King",
+  "request": {
+    "url": "http://10.30.210.153:15890/web-view/api/v1/prepay-card/physical/register",
+    "method": "POST",
+    "headers": {
+      "X-KM-User-AspId": "000187000000000",
+      "X-KM-Correlation-Id": "261109160117-8007236",
+      "X-KM-Access-Key": "6167e69-bb878da6f6afcf06902427c1e752ecc4",
+      "X-KM-Tran-Time": "20261109160117",
+      "X-KM-Time-Zone": "KST",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "cardApplyNo": "CA20261109190116599616",
+      "userId": 50001168591,
+      "physicalCardNo": "1110110902470022",
+      "physicalCardExpDate": "3611",
+      "physicalCardCVC": "130",
+      "tcList": [],
+      "extMobileCardPar": "Q164B24B4FF2EFF429C1F8BBC25"
+    }
+  },
+  "response": {
+    "status": 400,
+    "reason": "Bad Request",
+    "headers": {
+      "X-KM-Response-Count": "1",
+      "X-KM-Request-Count": "1",
+      "Content-Type": "application/json;charset=UTF-8",
+      "Date": "Mon, 09 Nov 2026 10:01:17 GMT",
+      "Content-Length": "63",
+      "connection": "close"
+    },
+    "body": {
+      "response": {
+        "code": "003_029",
+        "description": "Card not found."
+      }
+    },
+    "elapsedMs": 354
+  }
+}

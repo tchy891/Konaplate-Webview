@@ -1,0 +1,48 @@
+{
+  "timestamp": "2026-11-09T17:07:26",
+  "feature": "pg_info_inquiry",
+  "target": "BURGER_KING",
+  "version": "V1",
+  "affiliate": "Burger King",
+  "request": {
+    "url": "http://10.30.210.153:15890/web-view/api/v1/bankaccounts/pg-info/inquiry",
+    "method": "POST",
+    "headers": {
+      "X-KM-User-AspId": "000187000000000",
+      "X-KM-Correlation-Id": "261109170726-2188333",
+      "X-KM-Access-Key": "6167e69-bb878da6f6afcf06902427c1e752ecc4",
+      "X-KM-Tran-Time": "20261109170726",
+      "X-KM-Time-Zone": "KST",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "bankCode": "020"
+    }
+  },
+  "response": {
+    "status": 200,
+    "reason": "OK",
+    "headers": {
+      "X-KM-Response-Count": "1",
+      "X-KM-User-MpaId": "17938670068783218503604066725365",
+      "X-KM-UserId": "50001168146",
+      "X-KM-Request-Count": "1",
+      "Date": "Mon, 09 Nov 2026 11:07:26 GMT",
+      "X-KM-Correlation-Id": "261109170726-2188333",
+      "X-KM-User-AspId": "000187000000000",
+      "Content-Type": "application/json;charset=UTF-8",
+      "X-KM-UserName": "myxrg2r@vv.com",
+      "Content-Length": "102",
+      "connection": "close"
+    },
+    "body": {
+      "normalRcg": "FIRM_BANK",
+      "autoRcg": "FIRM_BANK",
+      "response": {
+        "code": "000_000",
+        "description": "Success."
+      }
+    },
+    "elapsedMs": 385
+  }
+}

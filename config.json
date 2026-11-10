@@ -1,0 +1,378 @@
+{
+  "_README": "EDIT THIS FILE to change any request input. 'targets' = per-affiliate / per-webview-version connection + headers. 'features[x].body' = the default request body. 'features[x].overrides.<TARGET>.<VERSION>' = values that are deep-merged on top of the default body for that specific affiliate + version (use it for tcIdList, joinChannel, etc.). 'features[x].randomize' = which fields the app re-generates on every send.",
+  "defaults": {
+    "timeZone": "KST",
+    "contentType": "application/json",
+    "timeoutSeconds": 30,
+    "captureKeys": [
+      "userId",
+      "userKey",
+      "userNo",
+      "ciKey",
+      "accessToken",
+      "refreshToken",
+      "accountId",
+      "bankAccRegNo",
+      "bankCode",
+      "bankAccount",
+      "bankName",
+      "cardId",
+      "cardNo",
+      "par",
+      "applyId",
+      "applicationId",
+      "cardApplyNo",
+      "mobileCardNo",
+      "mobileCardCVC",
+      "mobileCardPar",
+      "mobileCardExpiryDate"
+    ]
+  },
+  "randomFields": {
+    "ci": {
+      "type": "token",
+      "length": 88,
+      "prefix": "KONAPL",
+      "charset": "alphanumeric",
+      "_note": "length is the TOTAL length including prefix (sample CI was 88 chars)"
+    },
+    "loginId": {
+      "type": "email",
+      "localLength": 8,
+      "domain": "yahoo.com",
+      "charset": "lower_alphanumeric"
+    },
+    "email": {
+      "type": "email",
+      "localLength": 9,
+      "domain": "yahoo.com",
+      "charset": "lower_alphanumeric"
+    },
+    "mobileNumber": {
+      "type": "mobile",
+      "prefix": "010",
+      "digits": 8,
+      "_note": "not randomized by default - add \"mobileNumber\" to features.user_registration.randomize to switch it on"
+    }
+  },
+  "cardSource": {
+    "_README": "Pulls physical test-card data from the KONA PLATE QA portal for the Card Registration step. Project is chosen by the selected WebView version; add a per-affiliate entry under 'projectsByTarget' if an affiliate needs a different one. Credentials are stored here in plain text - this file is local only.",
+    "enabled": true,
+    "autoFetch": true,
+    "baseUrl": "https://dev-qa.konapay.net:10444",
+    "email": "Kona2@yopmail.com",
+    "password": "Kona!123",
+    "verifyTls": false,
+    "timeoutSeconds": 45,
+    "language": "en",
+    "statusFilter": "ACTIVE",
+    "maxCardAttempts": 12,
+    "projects": {
+      "V1": {
+        "name": "P1-P2-Tim Hortons-V1",
+        "projectId": "31201456118020001"
+      },
+      "V2": {
+        "name": "Revamped-P1-P2-BK",
+        "projectId": "31201031911600001"
+      }
+    },
+    "projectsByTarget": {},
+    "fieldMap": {
+      "physicalCardNo": "cardNo",
+      "physicalCardExpDate": "expiryDate",
+      "physicalCardCVC": "cvc",
+      "extMobileCardPar": "par"
+    }
+  },
+  "targets": {
+    "BURGER_KING": {
+      "label": "Burger King",
+      "versions": {
+        "V1": {
+          "baseUrl": "http://10.30.210.153:15890",
+          "aspId": "000187000000000",
+          "accessKey": "6167e69-bb878da6f6afcf06902427c1e752ecc4",
+          "endpoints": {
+            "user_registration": "/web-view/api/v1/user/registration",
+            "bank_account_registration": "/web-view/api/v1/bankaccounts/ars/register",
+            "bank_account_inquiry": "/web-view/api/v1/bankaccounts/inquiry",
+            "pg_info_inquiry": "/web-view/api/v1/bankaccounts/pg-info/inquiry",
+            "apply_card": "/web-view/api/v1/prepay-card/issue/delivery",
+            "card_registration": "/web-view/api/v1/prepay-card/physical/register"
+          }
+        },
+        "V2": {
+          "_note": "V2 uses the SAME path and AspId as V1 - only the access key differs (per the supplied cURLs)",
+          "baseUrl": "http://10.30.210.153:15890",
+          "aspId": "000187000000000",
+          "accessKey": "6167e69-a0f12213a45e2d9ce47cc3c9a6623696",
+          "endpoints": {
+            "user_registration": "/web-view/api/v1/user/registration",
+            "bank_account_registration": "/web-view/api/v1/bankaccounts/ars/register",
+            "bank_account_inquiry": "/web-view/api/v1/bankaccounts/inquiry",
+            "pg_info_inquiry": "/web-view/api/v1/bankaccounts/pg-info/inquiry",
+            "apply_card": "/web-view/api/v1/prepay-card/issue/delivery",
+            "card_registration": "/web-view/api/v1/prepay-card/physical/register"
+          }
+        }
+      }
+    },
+    "IKUKA": {
+      "label": "iKuka",
+      "versions": {
+        "V1": {
+          "baseUrl": "http://10.30.210.153:15890",
+          "aspId": "CHANGE_ME",
+          "accessKey": "CHANGE_ME",
+          "endpoints": {
+            "user_registration": "/web-view/api/v1/user/registration",
+            "bank_account_registration": "/web-view/api/v1/bankaccounts/ars/register",
+            "bank_account_inquiry": "/web-view/api/v1/bankaccounts/inquiry",
+            "pg_info_inquiry": "/web-view/api/v1/bankaccounts/pg-info/inquiry",
+            "apply_card": "/web-view/api/v1/prepay-card/issue/delivery",
+            "card_registration": "/web-view/api/v1/prepay-card/physical/register"
+          }
+        },
+        "V2": {
+          "baseUrl": "http://10.30.210.153:15890",
+          "aspId": "CHANGE_ME",
+          "accessKey": "CHANGE_ME",
+          "endpoints": {
+            "user_registration": "/web-view/api/v1/user/registration",
+            "bank_account_registration": "/web-view/api/v1/bankaccounts/ars/register",
+            "bank_account_inquiry": "/web-view/api/v1/bankaccounts/inquiry",
+            "pg_info_inquiry": "/web-view/api/v1/bankaccounts/pg-info/inquiry",
+            "apply_card": "/web-view/api/v1/prepay-card/issue/delivery",
+            "card_registration": "/web-view/api/v1/prepay-card/physical/register"
+          }
+        }
+      }
+    }
+  },
+  "features": {
+    "user_registration": {
+      "order": 1,
+      "label": "User Registration",
+      "method": "POST",
+      "randomize": [
+        "ci",
+        "loginId",
+        "email"
+      ],
+      "body": {
+        "ci": "KONAPL58K9WELg9LKDLNKS9l0sSNgVNdEuRYRsDFcr05JTGxG2Mp27kvSiMpH5oO475Gegfc43gDOLwmNh36rt59",
+        "loginId": "w1albc1m@yahoo.com",
+        "loginPassword": "112233",
+        "birthDate": "19920211",
+        "nationality": "Korean",
+        "gender": "Male",
+        "userName": "기충종",
+        "mobileNumber": "01087341335",
+        "email": "w1c1rfo1b@yahoo.com",
+        "joinChannel": "OPENAPI",
+        "addressInfo": {
+          "zipCode": "12345",
+          "address": "서울특별시 영등포구 은행로 3",
+          "addressDetail": "8층"
+        },
+        "tcIdList": [
+          "664156",
+          "664160"
+        ]
+      },
+      "overrides": {
+        "BURGER_KING": {
+          "V1": {
+            "ci": "KONAPL58K9WELg9LKDLNKS9l0sSNgVNdEuRYRsDFcr05JTGxG2Mp27kvSiMpH5oO475Gegfc43gDOLwmNh36rt59",
+            "loginId": "w1albc1m@yahoo.com",
+            "loginPassword": "112233",
+            "birthDate": "19920211",
+            "nationality": "Korean",
+            "gender": "Male",
+            "userName": "기충종",
+            "mobileNumber": "01087341335",
+            "email": "w1c1rfo1b@yahoo.com",
+            "joinChannel": "OPENAPI",
+            "addressInfo": {
+              "zipCode": "12345",
+              "address": "서울특별시 영등포구 은행로 3",
+              "addressDetail": "8층"
+            },
+            "tcIdList": [
+              "664156",
+              "664160"
+            ]
+          },
+          "V2": {}
+        },
+        "IKUKA": {
+          "V1": {},
+          "V2": {}
+        }
+      }
+    },
+    "bank_account_registration": {
+      "order": 2,
+      "label": "Bank Account Registration",
+      "method": "POST",
+      "randomize": [],
+      "_note": "{{userId}} is filled from the Session of the SELECTED affiliate + webview version, i.e. the user registered in step 1 under that same target.",
+      "body": {
+        "userId": "{{userId}}",
+        "bankAccount": "1002041963212",
+        "bankCode": "020",
+        "bankName": "우리은행",
+        "userName": "기충종",
+        "birthDate": "19920211",
+        "langCode": "ko",
+        "userType": "NORMAL",
+        "creationType": "FACE"
+      },
+      "overrides": {
+        "BURGER_KING": {
+          "V1": {},
+          "V2": {}
+        },
+        "IKUKA": {
+          "V1": {},
+          "V2": {}
+        }
+      }
+    },
+    "bank_account_inquiry": {
+      "order": 3,
+      "label": "Bank Account Inquiry",
+      "method": "POST",
+      "randomize": [],
+      "_note": "{{userId}} = the user whose bank account was registered in step 2, taken from the Session of the selected affiliate + webview version. NOTE: the ARS registration in step 2 is not instantly visible here - fired within a second it can answer 200 with every bankAcc* field null. Wait a few seconds and send again; bankCode is what step 4 needs.",
+      "body": {
+        "userId": "{{userId}}"
+      },
+      "overrides": {
+        "BURGER_KING": {
+          "V1": {},
+          "V2": {}
+        },
+        "IKUKA": {
+          "V1": {},
+          "V2": {}
+        }
+      }
+    },
+    "pg_info_inquiry": {
+      "order": 4,
+      "label": "PG Info Inquiry",
+      "method": "POST",
+      "randomize": [],
+      "_note": "{{bankCode}} comes from the step 3 response (bankAccForNormalRcg.bankCode). Verified to work with each version's own access key - the separate 6167e69-198ef80d... key from the sample cURL is not required.",
+      "body": {
+        "bankCode": "{{bankCode}}"
+      },
+      "overrides": {
+        "BURGER_KING": {
+          "V1": {},
+          "V2": {}
+        },
+        "IKUKA": {
+          "V1": {},
+          "V2": {}
+        }
+      }
+    },
+    "apply_card": {
+      "order": 5,
+      "label": "Apply Card",
+      "method": "POST",
+      "randomize": [],
+      "_note": "{{userId}} comes from step 1 on the selected target. serviceId picks the product; isDeliveryRequired true = physical/plastic card, false = virtual card. Both are dropdowns in the Form view - add more serviceId products under 'options' below and they appear in the list.",
+      "body": {
+        "userInfo": {
+          "userId": "{{userId}}",
+          "addressInfo": {
+            "address": "서울특별시 영등포구 은행로 3",
+            "addressDetail": "8층",
+            "zipCode": "12345"
+          }
+        },
+        "serviceId": "000187000010000",
+        "isDeliveryRequired": true
+      },
+      "options": {
+        "serviceId": [
+          {
+            "value": "000187000010000",
+            "label": "000187000010000 — prepay card (from the sample cURL)"
+          }
+        ],
+        "isDeliveryRequired": [
+          {
+            "value": true,
+            "label": "true — physical / plastic card (delivery)"
+          },
+          {
+            "value": false,
+            "label": "false — virtual card (no delivery)"
+          }
+        ]
+      },
+      "overrides": {
+        "BURGER_KING": {
+          "V1": {},
+          "V2": {}
+        },
+        "IKUKA": {
+          "V1": {},
+          "V2": {}
+        }
+      }
+    },
+    "card_registration": {
+      "order": 6,
+      "label": "Card Registration",
+      "method": "POST",
+      "randomize": [],
+      "cardSource": true,
+      "_note": "{{cardApplyNo}} comes from step 5 (Apply Card) and {{userId}} from step 1, both for the selected affiliate + webview version - they must belong to the same user. The three physicalCard* fields identify the actual plastic card and are meant to be typed in per run; the values listed under 'options' are the ones from the sample cURL.",
+      "body": {
+        "cardApplyNo": "{{cardApplyNo}}",
+        "userId": "{{userId}}",
+        "physicalCardNo": "1110110902360017",
+        "physicalCardExpDate": "3608",
+        "physicalCardCVC": "169",
+        "tcList": [],
+        "extMobileCardPar": "Q16CA77E66F2EE58D9C4EBED5BF"
+      },
+      "options": {
+        "physicalCardNo": [
+          {
+            "value": "1110110902360017",
+            "label": "1110110902360017 — sample from the cURL (change per card)"
+          }
+        ],
+        "physicalCardExpDate": [
+          {
+            "value": "3608",
+            "label": "3608 — YYMM, sample from the cURL"
+          }
+        ],
+        "physicalCardCVC": [
+          {
+            "value": "169",
+            "label": "169 — sample from the cURL"
+          }
+        ]
+      },
+      "overrides": {
+        "BURGER_KING": {
+          "V1": {},
+          "V2": {}
+        },
+        "IKUKA": {
+          "V1": {},
+          "V2": {}
+        }
+      }
+    }
+  }
+}

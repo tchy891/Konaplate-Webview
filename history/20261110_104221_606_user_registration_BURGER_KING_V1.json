@@ -1,0 +1,71 @@
+{
+  "timestamp": "2026-11-10T10:42:21",
+  "feature": "user_registration",
+  "target": "BURGER_KING",
+  "version": "V1",
+  "affiliate": "Burger King",
+  "request": {
+    "url": "http://10.30.210.153:15890/web-view/api/v1/user/registration",
+    "method": "POST",
+    "headers": {
+      "X-KM-User-AspId": "000187000000000",
+      "X-KM-Correlation-Id": "261110104220-7207410",
+      "X-KM-Access-Key": "6167e69-bb878da6f6afcf06902427c1e752ecc4",
+      "X-KM-Tran-Time": "20261110104220",
+      "X-KM-Time-Zone": "KST",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "ci": "KONAPLY53ml6AOzKvNlplSiuQl5QirOiHle3d6ZHuRGIgMJyvTFfoUy14Ngqi8yJbSx3UfQIlEQzQQel13CTsOPw",
+      "loginId": "3lr297k3@yahoo.com",
+      "loginPassword": "112233",
+      "birthDate": "19920211",
+      "nationality": "Korean",
+      "gender": "Male",
+      "userName": "기충종",
+      "mobileNumber": "01087341335",
+      "email": "xu8nfcpt2@yahoo.com",
+      "joinChannel": "OPENAPI",
+      "addressInfo": {
+        "zipCode": "12345",
+        "address": "서울특별시 영등포구 은행로 3",
+        "addressDetail": "8층"
+      },
+      "tcIdList": [
+        "664156",
+        "664160"
+      ]
+    }
+  },
+  "response": {
+    "status": 200,
+    "reason": "OK",
+    "headers": {
+      "X-KM-Response-Count": "1",
+      "X-KM-User-MpaId": "17942857405945513608822252606808",
+      "X-KM-UserId": "50001168681",
+      "X-KM-Request-Count": "1",
+      "Date": "Tue, 10 Nov 2026 04:42:21 GMT",
+      "X-KM-Correlation-Id": "261110104220-7207410",
+      "X-KM-User-AspId": "000187000000000",
+      "Content-Type": "application/json;charset=UTF-8",
+      "X-KM-UserName": "",
+      "Content-Length": "211",
+      "connection": "close"
+    },
+    "body": {
+      "userId": 50001168681,
+      "basicCardInfo": {
+        "par": "Q188904715F2F0017ED10130057",
+        "cardNo": "1110110502780093",
+        "expiryDate": "991231",
+        "serviceId": "000187000001000"
+      },
+      "response": {
+        "code": "000_000",
+        "description": "Success."
+      }
+    },
+    "elapsedMs": 1473
+  }
+}

@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>KONA WebView Helper</title>
+<link rel="stylesheet" href="styles.css">
+<script>
+  /* set the theme before first paint so there is no flash of the wrong one */
+  (function () {
+    var saved = null;
+    try { saved = localStorage.getItem("konaTheme"); } catch (e) { /* storage blocked */ }
+    var dark = saved ? saved === "dark"
+      : window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+  })();
+</script>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%236D28D9'/><rect x='6.5' y='8.5' width='19' height='15' rx='3' fill='none' stroke='white' stroke-width='2'/><path d='M6.5 13h19' stroke='white' stroke-width='2'/><rect x='10' y='16' width='12' height='4.6' rx='1.3' fill='white'/></svg>">
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ------------------------------------------------ sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand__badge">
+        <!-- a web view framing a card: the browser chrome plus the card it issues -->
+        <svg viewBox="0 0 32 32" width="23" height="23" fill="none" stroke="#fff"
+             stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
+          <rect x="4" y="6" width="24" height="20" rx="4"/>
+          <path d="M4 12.5h24"/>
+          <circle cx="8.4" cy="9.3" r="1.05" fill="#fff" stroke="none"/>
+          <circle cx="11.9" cy="9.3" r="1.05" fill="#fff" stroke="none"/>
+          <rect x="9" y="16.5" width="14" height="6" rx="1.6" fill="#fff" stroke="none"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand__name">KONA WEBVIEW</div>
+        <div class="brand__sub">WebView API console</div>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <div class="nav__section">Modules</div>
+      <div id="moduleNav" class="nav__group"></div>
+
+      <div class="nav__section">Flow</div>
+      <button class="nav__item" data-page="runall">
+        <!-- play inside a circle: run the whole chain -->
+        <svg class="nav__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="8.4"/><path d="M10.2 8.6 15.6 12l-5.4 3.4z"/>
+        </svg> Run All Modules
+      </button>
+
+      <div class="nav__section">Tools</div>
+      <button class="nav__item" data-page="records">
+        <!-- a table: rows of created users and cards -->
+        <svg class="nav__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3.2" y="4.6" width="17.6" height="14.8" rx="2.2"/>
+          <path d="M3.2 9.4h17.6M3.2 14.4h17.6M9.4 9.4v10"/>
+        </svg> Records
+      </button>
+      <button class="nav__item" data-page="history">
+        <!-- a clock with a rewind arrow: past calls -->
+        <svg class="nav__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3.6 12a8.4 8.4 0 1 0 2.5-6"/><path d="M3.3 4.2v4.2h4.2"/>
+          <path d="M12 7.8V12l3 1.8"/>
+        </svg> History
+      </button>
+      <button class="nav__item" data-page="settings">
+        <!-- sliders: the config file -->
+        <svg class="nav__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M5 4.6v5M5 14v5.4M12 4.6v8.6M12 17.6v1.8M19 4.6v2.8M19 11.8v7.6"/>
+          <circle cx="5" cy="11.8" r="2.2"/><circle cx="12" cy="15.4" r="2.2"/><circle cx="19" cy="9.6" r="2.2"/>
+        </svg> Settings
+      </button>
+    </nav>
+
+    <div class="env">
+      <span class="env__pill" id="envPill">QA</span>
+      <div class="env__row"><i class="dot" id="dotHost"></i> HOST <b id="envHost">—</b></div>
+      <div class="env__row"><i class="dot dot--idle"></i> ASP <b id="envAsp">—</b></div>
+      <div class="env__row"><i class="dot dot--idle"></i> PATH <b id="envPath">—</b></div>
+      <div class="env__row"><i class="dot dot--idle" id="dotApi"></i> API <b id="envApi">—</b></div>
+    </div>
+  </aside>
+
+  <!-- ------------------------------------------------ main -->
+  <main class="main">
+    <header class="topbar">
+      <h1 id="pageTitle">USER REGISTRATION</h1>
+      <div class="crumb">User&nbsp;→&nbsp;Bank Account&nbsp;→&nbsp;Apply Card&nbsp;→&nbsp;Card</div>
+      <span class="grow"></span>
+      <button class="theme-toggle" id="themeToggle" title="Switch between light and dark">
+        <span id="themeIcon">☾</span><span id="themeLabel">Dark</span>
+      </button>
+    </header>
+
+    <div class="content">
+
+      <!-- ============================== FLOW PAGE -->
+      <section class="page" id="page-flow">
+
+        <!-- target -->
+        <section class="panel panel--accent">
+          <div class="panel__head">
+            <span>TARGET</span>
+            <span class="panel__hint">Affiliate × webview version · headers are generated per send</span>
+          </div>
+          <div class="panel__body">
+            <div class="row">
+              <label class="row__label">Affiliate</label>
+              <div class="pills" id="affiliatePills"></div>
+            </div>
+            <div class="row">
+              <label class="row__label">WebView</label>
+              <div class="pills" id="versionPills"></div>
+            </div>
+
+            <div class="grid">
+              <div class="field field--wide">
+                <label>Base URL</label>
+                <input id="baseUrl" class="mono" spellcheck="false">
+              </div>
+              <div class="field">
+                <label>X-KM-User-AspId</label>
+                <input id="aspId" class="mono" spellcheck="false">
+              </div>
+              <div class="field field--wide">
+                <label>X-KM-Access-Key</label>
+                <input id="accessKey" class="mono" spellcheck="false">
+              </div>
+              <div class="field">
+                <label>X-KM-Time-Zone</label>
+                <input id="timeZone" class="mono" spellcheck="false">
+              </div>
+              <div class="field field--sm">
+                <label>Timeout (s)</label>
+                <input id="timeout" class="mono" spellcheck="false">
+              </div>
+            </div>
+
+            <div class="actions">
+              <button class="btn" id="btnPing">Test connection</button>
+              <button class="btn" id="btnSaveConn">Save target to config</button>
+              <label class="check"><input type="checkbox" id="useProxy"> Use system proxy</label>
+              <span class="grow"></span>
+              <span class="note" id="connNote"></span>
+            </div>
+          </div>
+        </section>
+
+        <div class="split">
+
+          <!-- request -->
+          <section class="panel">
+            <div class="panel__head">
+              <span>REQUEST</span>
+              <span class="panel__hint" id="requestHint">Body · randomized fields</span>
+            </div>
+            <div class="panel__body">
+              <div class="grid">
+                <div class="field field--sm">
+                  <label>Method</label>
+                  <select id="method" class="mono">
+                    <option>POST</option><option>GET</option><option>PUT</option>
+                    <option>PATCH</option><option>DELETE</option>
+                  </select>
+                </div>
+                <div class="field field--grow">
+                  <label>Path</label>
+                  <input id="path" class="mono" spellcheck="false">
+                </div>
+              </div>
+              <div class="url" id="urlPreview">—</div>
+
+              <div class="tabs">
+                <button class="tab is-active" data-view="form">Form</button>
+                <button class="tab" data-view="json">Raw JSON</button>
+                <button class="tab" data-view="headers">Extra headers</button>
+                <span class="grow"></span>
+                <label class="check"><input type="checkbox" id="autoRandom" checked> Randomize before send</label>
+                <label class="check"><input type="checkbox" id="saveHistory" checked> Save history</label>
+              </div>
+
+              <div class="view" id="view-form"><div id="formFields" class="fields"></div></div>
+              <div class="view is-hidden" id="view-json">
+                <textarea id="jsonBody" class="mono code" spellcheck="false"></textarea>
+              </div>
+              <div class="view is-hidden" id="view-headers">
+                <p class="note">One <code>Key: value</code> per line. These are added to the generated headers and override them on name clash.</p>
+                <textarea id="extraHeaders" class="mono code code--sm" spellcheck="false" placeholder="X-KM-Device-Id: QA-TEST-01"></textarea>
+              </div>
+
+              <div class="actions actions--footer">
+                <button class="btn btn--primary" id="btnSend">Send Request</button>
+                <button class="btn is-hidden" id="btnFetchCard">Fetch card from portal</button>
+                <button class="btn" id="btnRandom">Randomize</button>
+                <button class="btn" id="btnReset">Reset from config</button>
+                <button class="btn" id="btnCurl">Copy cURL</button>
+                <button class="btn" id="btnSaveBody">Save body → this target</button>
+                <button class="btn" id="btnSaveDefault">Save body → shared default</button>
+              </div>
+              <div class="note" id="requestNote"></div>
+            </div>
+          </section>
+
+          <!-- response -->
+          <section class="panel">
+            <div class="panel__head">
+              <span>RESPONSE</span>
+              <span class="panel__hint" id="responseMeta">No request sent yet</span>
+            </div>
+            <div class="panel__body">
+              <div class="statusbar">
+                <span class="chip chip--idle" id="statusChip">IDLE</span>
+                <span class="note mono" id="statusUrl"></span>
+              </div>
+              <div class="tabs">
+                <button class="tab is-active" data-rview="body">Body</button>
+                <button class="tab" data-rview="headers">Response headers</button>
+                <button class="tab" data-rview="sent">Sent headers</button>
+                <button class="tab" data-rview="curl">cURL</button>
+              </div>
+              <pre class="out" id="out-body">—</pre>
+              <pre class="out is-hidden" id="out-headers">—</pre>
+              <pre class="out is-hidden" id="out-sent">—</pre>
+              <pre class="out is-hidden" id="out-curl">—</pre>
+            </div>
+          </section>
+        </div>
+
+        <!-- session -->
+        <section class="panel">
+          <div class="panel__head">
+            <span>SESSION</span>
+            <span class="panel__hint" id="sessionScope">Kept per affiliate × webview version · reuse as {{name}}</span>
+          </div>
+          <div class="panel__body">
+            <div class="chips" id="sessionChips"><span class="note">Empty — send a request and captured values land here</span></div>
+            <div class="actions">
+              <button class="btn" id="btnLoadSession">Load latest from history</button>
+              <button class="btn" id="btnCopySession">Copy JSON</button>
+              <button class="btn" id="btnClearSession">Clear this target</button>
+              <button class="btn" id="btnClearAllSessions">Clear all targets</button>
+              <span class="note" id="sessionOthers"></span>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <!-- ============================== RUN ALL PAGE -->
+      <section class="page is-hidden" id="page-runall">
+        <section class="panel panel--accent">
+          <div class="panel__head">
+            <span>RUN ALL MODULES</span>
+            <span class="panel__hint">Every module in order, chained on one freshly created user</span>
+          </div>
+          <div class="panel__body">
+            <div class="row">
+              <label class="row__label">Target</label>
+              <div class="pills" id="runAllTarget"></div>
+            </div>
+
+            <div class="actions">
+              <label class="check"><input type="checkbox" id="runBoth"> Run V1 and V2, one after the other</label>
+              <label class="check"><input type="checkbox" id="runPhysical" checked> Apply a physical card (delivery)</label>
+              <label class="check"><input type="checkbox" id="runStopOnFail" checked> Stop on first failure</label>
+              <div class="field field--sm">
+                <label>Settle (s)</label>
+                <input id="runSettle" class="mono" value="8"
+                       title="Pause after Bank Account Registration — the ARS record is not visible to the inquiry straight away">
+              </div>
+            </div>
+
+            <div class="actions actions--footer">
+              <button class="btn btn--primary" id="btnRunAll">Run All Modules</button>
+              <button class="btn" id="btnRunCancel" disabled>Cancel</button>
+              <button class="btn" id="btnRunClear" disabled title="Clear the results above and start fresh">Refresh</button>
+              <span class="note" id="runAllNote">Runs User Registration first, then feeds its userId through every later module.</span>
+            </div>
+
+            <div id="runProgress" class="runlist"></div>
+          </div>
+        </section>
+      </section>
+
+      <!-- ============================== RECORDS PAGE -->
+      <section class="page is-hidden" id="page-records">
+        <section class="panel">
+          <div class="panel__head">
+            <span>REGISTERED USERS &amp; CARDS</span>
+            <span class="panel__hint">Built from <code>history\</code> — every successful run is included</span>
+          </div>
+          <div class="panel__body">
+            <div class="stats" id="recordStats"></div>
+            <div class="actions">
+              <button class="btn" id="btnRefreshRecords">Refresh</button>
+              <button class="btn" id="btnRecordsCsv">Download CSV</button>
+              <div class="search">
+                <svg class="search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                  <circle cx="10.5" cy="10.5" r="6.2"/><path d="M15.2 15.2 20.5 20.5"/>
+                </svg>
+                <input id="recordFilter" class="filter" spellcheck="false"
+                       placeholder="Search — user ID, login, card no, affiliate, label…">
+                <button class="search__clear is-hidden" id="recordFilterClear"
+                        title="Clear search" aria-label="Clear search">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                       stroke-linecap="round" aria-hidden="true">
+                    <path d="M6.6 6.6 17.4 17.4M17.4 6.6 6.6 17.4"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="tablewrap tablewrap--tall">
+              <table class="table" id="recordsTable">
+                <thead><tr>
+                  <th>Registered</th><th>Affiliate</th><th>WV</th><th>User ID</th><th>Login ID</th>
+                  <th>Card Apply No</th><th>Mobile Card No</th><th>Physical Card No</th><th>Card Type</th>
+                  <th>Next step</th>
+                </tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <p class="note" id="recordsNote"></p>
+          </div>
+        </section>
+      </section>
+
+      <!-- ============================== HISTORY PAGE -->
+      <section class="page is-hidden" id="page-history">
+        <section class="panel">
+          <div class="panel__head">
+            <span>HISTORY</span>
+            <span class="panel__hint">Every call is stored in <code>history\</code> as request + response</span>
+          </div>
+          <div class="panel__body">
+            <div class="actions">
+              <button class="btn" id="btnRefreshHistory">Refresh</button>
+              <span class="note" id="historyNote"></span>
+            </div>
+            <div class="tablewrap">
+              <table class="table" id="historyTable">
+                <thead><tr><th>Time</th><th>Feature</th><th>Affiliate</th><th>WebView</th><th>Status</th><th>ms</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <pre class="out" id="historyDetail">Select a row to see the full request and response</pre>
+          </div>
+        </section>
+      </section>
+
+      <!-- ============================== SETTINGS PAGE -->
+      <section class="page is-hidden" id="page-settings">
+        <section class="panel panel--accent">
+          <div class="panel__head">
+            <span>CONFIG.JSON</span>
+            <span class="panel__hint">Single source of truth for every request input</span>
+          </div>
+          <div class="panel__body">
+            <p class="note">
+              <b>targets</b> — base URL, AspId, access key and endpoint paths per affiliate × version ·
+              <b>features[x].body</b> — the default request body ·
+              <b>features[x].overrides.TARGET.VERSION</b> — values deep-merged on top for one affiliate+version ·
+              <b>features[x].randomize</b> — fields regenerated every send ·
+              <b>randomFields</b> — how each random value is built.
+            </p>
+            <textarea id="configRaw" class="mono code code--tall" spellcheck="false"></textarea>
+            <div class="actions actions--footer">
+              <button class="btn btn--primary" id="btnSaveConfig">Save config.json</button>
+              <button class="btn" id="btnReloadConfig">Reload from disk</button>
+              <span class="note" id="configNote"></span>
+            </div>
+          </div>
+        </section>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>

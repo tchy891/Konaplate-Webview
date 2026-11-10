@@ -1,0 +1,51 @@
+{
+  "timestamp": "2026-11-09T12:42:44",
+  "feature": "bank_account_inquiry",
+  "target": "BURGER_KING",
+  "version": "V1",
+  "affiliate": "Burger King",
+  "request": {
+    "url": "http://10.30.210.153:15890/web-view/api/v1/bankaccounts/inquiry",
+    "method": "POST",
+    "headers": {
+      "X-KM-User-AspId": "000187000000000",
+      "X-KM-Correlation-Id": "261109124243-9393728",
+      "X-KM-Access-Key": "6167e69-bb878da6f6afcf06902427c1e752ecc4",
+      "X-KM-Tran-Time": "20261109124243",
+      "X-KM-Time-Zone": "KST",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "userId": 50001168508
+    }
+  },
+  "response": {
+    "status": 200,
+    "reason": "OK",
+    "headers": {
+      "X-KM-Response-Count": "1",
+      "X-KM-User-MpaId": "",
+      "X-KM-UserId": "",
+      "X-KM-Request-Count": "1",
+      "Date": "Mon, 09 Nov 2026 06:42:44 GMT",
+      "X-KM-Correlation-Id": "261109124243-9393728",
+      "X-KM-User-AspId": "000187000000000",
+      "Content-Type": "application/json;charset=UTF-8",
+      "X-KM-UserName": "",
+      "Content-Length": "206",
+      "connection": "close"
+    },
+    "body": {
+      "bankAccForNormalRcg": null,
+      "bankAccForAutoRcg": null,
+      "bankAccForAccTransferPay": null,
+      "isAutoRcgAccRegAllowed": false,
+      "isAccTransferPayRegAllowed": false,
+      "response": {
+        "code": "000_000",
+        "description": "Success."
+      }
+    },
+    "elapsedMs": 387
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "timestamp": "2026-11-10T11:05:03",
+  "feature": "apply_card",
+  "target": "BURGER_KING",
+  "version": "V1",
+  "affiliate": "Burger King",
+  "request": {
+    "url": "http://10.30.210.153:15890/web-view/api/v1/prepay-card/issue/delivery",
+    "method": "POST",
+    "headers": {
+      "X-KM-User-AspId": "000187000000000",
+      "X-KM-Correlation-Id": "261110110502-1975524",
+      "X-KM-Access-Key": "6167e69-bb878da6f6afcf06902427c1e752ecc4",
+      "X-KM-Tran-Time": "20261110110502",
+      "X-KM-Time-Zone": "KST",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "userInfo": {
+        "userId": 50001168692,
+        "addressInfo": {
+          "address": "서울특별시 영등포구 은행로 3",
+          "addressDetail": "8층",
+          "zipCode": "12345"
+        }
+      },
+      "serviceId": "000187000010000",
+      "isDeliveryRequired": true
+    }
+  },
+  "response": {
+    "status": 200,
+    "reason": "OK",
+    "headers": {
+      "X-KM-Response-Count": "1",
+      "X-KM-User-MpaId": "17942862982593715541820378881264",
+      "X-KM-UserId": "50001168683",
+      "X-KM-Request-Count": "1",
+      "Date": "Tue, 10 Nov 2026 05:05:03 GMT",
+      "X-KM-Correlation-Id": "261110110502-1975524",
+      "X-KM-User-AspId": "000187000000000",
+      "Content-Type": "application/json;charset=UTF-8",
+      "X-KM-UserName": "my45@vv.com",
+      "Content-Length": "231",
+      "connection": "close"
+    },
+    "body": {
+      "cardApplyNo": "CA20261110140503599665",
+      "mobileCardNo": "1110110902480047",
+      "mobileCardCVC": "165",
+      "mobileCardPar": "Q11796AFCAF2F002ABDD2795BB6",
+      "mobileCardExpiryDate": "20361130",
+      "response": {
+        "code": "000_000",
+        "description": "Success."
+      }
+    },
+    "elapsedMs": 933
+  }
+}

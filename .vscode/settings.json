@@ -1,0 +1,17 @@
+{
+  "//": "VS Code Live Server (ritwickdey.liveserver) - serves the web/ folder with hot reload. The Python API server must also be running: python server.py --no-browser",
+  "liveServer.settings.root": "/web",
+  "liveServer.settings.port": 5500,
+  "liveServer.settings.donotShowInfoMsg": true,
+  "liveServer.settings.donotVerifyTags": true,
+  "liveServer.settings.fullReload": false,
+  "liveServer.settings.ignoreFiles": [
+    ".vscode/**",
+    "**/history/**",
+    "**/__pycache__/**",
+    "**/*.py",
+    "**/*.json",
+    "**/*.md",
+    "**/*.bat"
+  ]
+}
