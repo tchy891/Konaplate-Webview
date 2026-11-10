@@ -675,20 +675,42 @@ class Handler(BaseHTTPRequestHandler):
             print("[{0}] {1}".format(self.log_date_time_string(), fmt % args))
 
     # ----------------------------------------------------------- responses
-    def _cors_headers(self):
-        """Allow a page served by VS Code Live Server (or any other local port) to call this API."""
-        origin = self.headers.get("Origin")
-        if not origin:
-            return {}
+    def _origin_allowed(self, origin):
+        """Local pages always; anything else only if config.json lists it.
+
+        The UI can be hosted (Vercel, an intranet box) while this server stays on the tester's
+        machine - that is the only way to reach a private API host like 10.30.x.x. Any origin in
+        the allowlist can drive this server while it runs, so keep the list short.
+        """
         host = urlparse(origin).hostname
         if host in ("127.0.0.1", "localhost", "::1"):
-            return {
-                "Access-Control-Allow-Origin": origin,
-                "Access-Control-Allow-Headers": "Content-Type",
-                "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-                "Vary": "Origin",
-            }
-        return {}
+            return True
+        for allowed in (store.data.get("server") or {}).get("allowedOrigins") or []:
+            allowed = str(allowed).strip().rstrip("/")
+            if not allowed:
+                continue
+            # exact match only: a wildcard domain would let any site hosted there drive this server
+            if allowed == origin:
+                return True
+        return False
+
+    def _cors_headers(self):
+        """CORS for a page served from somewhere other than this server."""
+        origin = self.headers.get("Origin")
+        if not origin or not self._origin_allowed(origin):
+            return {}
+        headers = {
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Headers": "Content-Type",
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+            "Access-Control-Max-Age": "600",
+            "Vary": "Origin",
+        }
+        # Chrome/Edge Private Network Access: a public HTTPS page calling http://127.0.0.1 is
+        # blocked unless the preflight is answered with this header.
+        if self.headers.get("Access-Control-Request-Private-Network") == "true":
+            headers["Access-Control-Allow-Private-Network"] = "true"
+        return headers
 
     def _send(self, status, body, content_type="application/json; charset=utf-8", extra_headers=None):
         payload = body if isinstance(body, bytes) else str(body).encode("utf-8")

@@ -1,5 +1,11 @@
 {
   "_README": "EDIT THIS FILE to change any request input. 'targets' = per-affiliate / per-webview-version connection + headers. 'features[x].body' = the default request body. 'features[x].overrides.<TARGET>.<VERSION>' = values that are deep-merged on top of the default body for that specific affiliate + version (use it for tcIdList, joinChannel, etc.). 'features[x].randomize' = which fields the app re-generates on every send.",
+  "server": {
+    "_README": "Exact origins of a hosted copy of this UI that may call this local server. Localhost is always allowed and needs no entry. Add ONLY the exact URL of your own deployment - never a wildcard such as *.vercel.app, because anyone can publish on that domain and would then be able to drive this server while it is running. Empty the list to accept local pages only.",
+    "allowedOrigins": [
+      "https://konaplate-webview-web.vercel.app"
+    ]
+  },
   "defaults": {
     "timeZone": "KST",
     "contentType": "application/json",

@@ -144,6 +144,41 @@ or double-click **`run.bat`**. Stop it with `Ctrl+C` in the console window.
 The browser never calls the WebView APIs directly — this server proxies every call, so the access
 key never leaves your machine. It binds to `127.0.0.1` only.
 
+### Hosting the UI on Vercel (or any other host)
+
+Vercel can serve the **UI only**. It cannot run the Python side, and more importantly a Vercel
+function could never reach `10.30.210.153` — that is a private address on your own network. So the
+split is: **Vercel serves the page, the Python server keeps running on your machine.**
+
+Recommended import settings:
+
+| Setting | Value |
+|---|---|
+| Framework Preset | `Other` |
+| Root Directory | `web` |
+| Build Command | leave empty (no build) |
+| Output Directory | leave empty |
+| Install Command | leave empty |
+| Environment Variables | none |
+
+Then, for the hosted page to drive your local server:
+
+1. Add the deployment's exact origin to `server.allowedOrigins` in `config.json`
+   (already set to `https://konaplate-webview-web.vercel.app`). Never put a wildcard such as
+   `*.vercel.app` there — anyone can publish on that domain and would then be able to drive your
+   local server while it runs.
+2. Run `python server.py --no-browser` on a machine that can reach the WebView API.
+3. Open the Vercel URL. The page finds `http://127.0.0.1:8770` by itself.
+
+The local server answers the Private Network Access preflight that Chrome and Edge require before
+an HTTPS page may call `http://127.0.0.1`; without that header the browser blocks the call before
+it is sent. Preview deployments get their own URLs, so each one you want to use must be added to
+the allowlist too.
+
+**Want a URL colleagues can use without running anything locally?** Vercel cannot give you that.
+Put the whole tool — `server.py` included — on a machine inside the network that can reach
+`10.30.210.153`, and share that host's address instead.
+
 ### Running it under VS Code Live Server
 
 Live Server only serves static files, so it **cannot replace** `server.py` — the `/api/*` calls that

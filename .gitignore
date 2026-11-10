@@ -1,0 +1,14 @@
+# Run artefacts - these contain real test-card numbers, CVCs, PARs and user IDs.
+# They belong on the machine that produced them, not in a shared repository.
+history/
+used_cards.json
+
+# Credentials: portal login and per-affiliate access keys live in config.json.
+# Keep your own copy local and commit config.example.json instead.
+config.json
+
+# Local noise
+__pycache__/
+*.pyc
+.vscode/
+.claude/

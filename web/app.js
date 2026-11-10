@@ -91,12 +91,22 @@ async function discoverApi() {
 }
 
 function showApiBanner() {
+  const hosted = location.protocol !== "file:" && !/^(127\.0\.0\.1|localhost|\[::1\])$/.test(location.hostname);
   $(".content").innerHTML =
     '<div class="banner"><b>API server not reachable.</b><br><br>'
-    + "This page is served from <code>" + location.origin + "</code>, but the calls to the WebView API "
-    + "are proxied by this project's Python server, which does not appear to be running.<br><br>"
-    + "Start it from the project folder:<br><code>python server.py --no-browser</code><br><br>"
-    + "…then reload this page. If it listens on a different port, open "
+    + "This page is served from <code>" + location.origin + "</code>, but every call to the WebView "
+    + "API is proxied by this project's Python server, which does not appear to be running.<br><br>"
+    + "Start it on a machine that can reach the API host, then reload this page:<br>"
+    + "<code>python server.py --no-browser</code><br><br>"
+    + (hosted
+      ? "Because this copy of the UI is hosted, two things must also be true:<br>"
+        + "&bull;&nbsp;the Python server runs on <b>this same computer</b> &mdash; the WebView API "
+        + "sits on a private address, so only a machine on that network can reach it;<br>"
+        + "&bull;&nbsp;<code>" + location.origin + "</code> is listed under "
+        + "<code>server.allowedOrigins</code> in <code>config.json</code>, otherwise the browser "
+        + "blocks the call.<br><br>"
+      : "")
+    + "If it listens on another port, open "
     + "<code>" + location.origin + location.pathname + "?api=http://127.0.0.1:PORT</code>."
     + "</div>";
 }
