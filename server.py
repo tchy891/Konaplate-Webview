@@ -24,8 +24,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, unquote
 
 from core.api_client import build_headers, parse_header_lines, send_request, to_curl
-from core.card_source import CardSource, PortalError
-from core.config_store import ConfigStore, find_values
+from core.card_source import CardSource, PortalError, asp_code
+from core.config_store import ConfigStore, deep_merge, find_values
 from core.randomizer import apply_random_fields
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -58,6 +58,15 @@ def bootstrap_payload():
             "label": feature.get("label", key),
             "method": feature.get("method", "POST"),
             "randomize": feature.get("randomize", []),
+            # a module can say it is not part of the default Run All selection; anything that
+            # does not say otherwise is ticked, so the six-step chain behaves as it always has
+            "runAllDefault": feature.get("runAllDefault", True),
+            # and it can say it belongs under another module, which is how the sidebar nests it
+            "parent": feature.get("parent", ""),
+            # free text shown on hover - e.g. the test bank account a variant expects
+            "tooltip": feature.get("tooltip", ""),
+            # what it counts AS: a variant behaves like the module it sits under
+            "role": feature_role(key),
         })
     return {
         "targets": targets,
@@ -111,7 +120,7 @@ def tcp_check(base_url, timeout=2.5):
         return {"ok": False, "detail": "{0}:{1} {2}".format(host, port, type(error).__name__)}
 
 
-def write_history(feature, target, version, request, result):
+def write_history(feature, target, version, request, result, project_name=""):
     os.makedirs(HISTORY_DIR, exist_ok=True)
     name = "{0}_{1}_{2}_{3}.json".format(
         datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:19], feature, target, version
@@ -122,6 +131,7 @@ def write_history(feature, target, version, request, result):
         "target": target,
         "version": version,
         "affiliate": store.target_label(target) if target in store.target_keys() else target,
+        "projectName": project_name or "",
         "request": request,
         "response": {
             "status": result.get("status"),
@@ -141,6 +151,21 @@ def _as_dict(value):
     return value if isinstance(value, dict) else {}
 
 
+def feature_role(key):
+    """What a module counts AS, for Records and for the session seed.
+
+    A variant is the same kind of request as the module it sits under, so Without CI counts as a
+    User Registration. A module can also say so outright with "role" in config.json - which is
+    what the Auto Recharge pair does, because the cURL they were built from registers a user.
+    Without this, a user created by any of them would never reach the Records table.
+    """
+    try:
+        feature = store.feature(key)
+    except Exception:
+        return key
+    return feature.get("role") or feature.get("parent") or key
+
+
 def build_records():
     """Ledger of registered users and their cards, rebuilt from the history folder.
 
@@ -158,7 +183,7 @@ def build_records():
                 "userId": user_id, "affiliate": record.get("affiliate", ""),
                 "target": record.get("target", ""), "version": record.get("version", ""),
                 "registeredAt": "", "loginId": "", "email": "", "mobileNumber": "",
-                "basicCardNo": "", "cards": {},
+                "basicCardNo": "", "projectName": "", "cards": {},
             }
         return users[key]
 
@@ -177,7 +202,7 @@ def build_records():
         status = _as_dict(record.get("response")).get("status")
         if not (isinstance(status, int) and 200 <= status < 300):
             continue
-        feature = record.get("feature", "")
+        feature = feature_role(record.get("feature", ""))
         request_body = _as_dict(_as_dict(record.get("request")).get("body"))
         response_body = _as_dict(_as_dict(record.get("response")).get("body"))
 
@@ -187,6 +212,7 @@ def build_records():
                 continue
             slot = user_slot(user_id, record)
             slot.update(
+                projectName=record.get("projectName", "") or slot["projectName"],
                 registeredAt=record.get("timestamp", ""),
                 affiliate=record.get("affiliate", slot["affiliate"]),
                 target=record.get("target", slot["target"]),
@@ -203,6 +229,8 @@ def build_records():
             if user_id is None or not apply_no:
                 continue
             slot = user_slot(user_id, record)
+            if not slot["projectName"]:
+                slot["projectName"] = record.get("projectName", "")
             slot["cards"][apply_no] = {
                 "cardApplyNo": apply_no,
                 "appliedAt": record.get("timestamp", ""),
@@ -236,7 +264,7 @@ def build_records():
     rows = []
     for slot in users.values():
         base = {key: slot[key] for key in
-                ("userId", "affiliate", "target", "version", "registeredAt",
+                ("userId", "affiliate", "target", "version", "projectName", "registeredAt",
                  "loginId", "email", "mobileNumber", "basicCardNo")}
         if not slot["cards"]:
             rows.append(dict(base, cardType="No card", cardApplyNo="", appliedAt="",
@@ -345,7 +373,7 @@ def latest_session(target, version, scan=250):
 
     anchor, seed = None, {}
     for record in records:                      # newest first
-        if record.get("feature") == "user_registration":
+        if feature_role(record.get("feature")) == "user_registration":
             response_body = _as_dict(_as_dict(record.get("response")).get("body"))
             anchor = response_body.get("userId")
             request_body = _as_dict(_as_dict(record.get("request")).get("body"))
@@ -360,7 +388,7 @@ def latest_session(target, version, scan=250):
 
     keys = set(store.defaults.get("captureKeys", []))
     for record in records:                      # newest first, so the first value found wins
-        if record.get("feature") == "user_registration":
+        if feature_role(record.get("feature")) == "user_registration":
             continue
         request_body = _as_dict(_as_dict(record.get("request")).get("body"))
         owner = request_body.get("userId") or _as_dict(request_body.get("userInfo")).get("userId")
@@ -384,7 +412,7 @@ def history_list(limit=300):
         if not name.endswith(".json"):
             continue
         row = {"file": name, "timestamp": "", "feature": "", "affiliate": "", "version": "",
-               "status": None, "elapsedMs": None}
+               "projectName": "", "status": None, "elapsedMs": None}
         try:
             with open(os.path.join(HISTORY_DIR, name), "r", encoding="utf-8") as handle:
                 record = json.load(handle)
@@ -393,6 +421,7 @@ def history_list(limit=300):
                 feature=record.get("feature", ""),
                 affiliate=record.get("affiliate", record.get("target", "")),
                 version=record.get("version", ""),
+                projectName=record.get("projectName", ""),
                 status=record.get("response", {}).get("status"),
                 elapsedMs=record.get("response", {}).get("elapsedMs"),
             )
@@ -425,12 +454,25 @@ def api_body(payload):
     }
 
 
+def random_specs(feature_key):
+    """The random rules for one feature: the global ones, with its own merged on top.
+
+    A variant can need a different shape for the same field - the Without CI requests use
+    dispostable.com addresses - without that leaking into every other module.
+    """
+    try:
+        own = store.feature(feature_key).get("randomFields") or {}
+    except Exception:
+        own = {}
+    return deep_merge(store.random_fields, own)
+
+
 def api_randomize(payload):
     body = payload.get("body") or {}
     fields = payload.get("fields")
     if fields is None:
         fields = store.feature(payload["feature"]).get("randomize", [])
-    generated = apply_random_fields(body, fields, store.random_fields)
+    generated = apply_random_fields(body, fields, random_specs(payload["feature"]))
     return {"body": body, "generated": generated}
 
 
@@ -450,7 +492,8 @@ def api_send(payload):
     feature = payload.get("feature", "")
     generated = {}
     if payload.get("randomizeBeforeSend") and feature:
-        generated = apply_random_fields(body, store.feature(feature).get("randomize", []), store.random_fields)
+        generated = apply_random_fields(body, store.feature(feature).get("randomize", []),
+                                        random_specs(feature))
 
     # never ship a literal {{placeholder}} to the API - it produces a baffling validation error
     unresolved = find_placeholders(body)
@@ -509,7 +552,7 @@ def api_send(payload):
     if payload.get("saveHistory", True):
         try:
             history_file = write_history(feature, payload.get("target", ""), payload.get("version", ""),
-                                         request_record, result)
+                                         request_record, result, payload.get("projectName", ""))
         except Exception as error:
             history_file = "not saved: {0}".format(error)
 
@@ -551,6 +594,12 @@ def api_save_connection(payload):
                 connection[field] = payload[field]
         if payload.get("path") is not None:
             connection.setdefault("endpoints", {})[payload["feature"]] = payload["path"]
+        # remember the portal project for this target so it is not only in one browser
+        name = (payload.get("projectName") or "").strip()
+        if name:
+            source = store.data.setdefault("cardSource", {})
+            by_target = source.setdefault("projectsByTarget", {})
+            by_target.setdefault(payload["target"], {})[payload["version"]] = {"name": name}
         store.save()
     return {"saved": "connection for {0} / {1}".format(payload["target"], payload["version"])}
 
@@ -595,36 +644,215 @@ def card_source_client():
     return _card_source["client"], config
 
 
-def pick_portal_card(target, version, extra_exclude=()):
+def last_applied_service(target, version):
+    """serviceId of the most recent successful Apply Card for this target.
+
+    The user can pick any service the project offers, so the physical card must follow what was
+    actually applied for - not the default sitting in config.json.
+    """
+    if not os.path.isdir(HISTORY_DIR):
+        return None
+    for name in sorted(os.listdir(HISTORY_DIR), reverse=True):
+        if not (name.endswith(".json") and "apply_card" in name):
+            continue
+        try:
+            with open(os.path.join(HISTORY_DIR, name), "r", encoding="utf-8") as handle:
+                record = json.load(handle)
+        except Exception:
+            continue
+        if record.get("target") != target or record.get("version") != version:
+            continue
+        status = _as_dict(record.get("response")).get("status")
+        if not (isinstance(status, int) and 200 <= status < 300):
+            continue
+        service = _as_dict(_as_dict(record.get("request")).get("body")).get("serviceId")
+        if service:
+            return str(service)
+    return None
+
+
+def pick_portal_card(target, version, extra_exclude=(), project_name=None, prefer=None):
     """One ACTIVE card for this target that we have not sent before. Raises PortalError/ValueError."""
     client, config = card_source_client()
     if not config.get("enabled"):
         raise ValueError("cardSource is disabled in config.json")
 
-    chosen = ((config.get("projectsByTarget") or {}).get(target) or {}).get(version) \
-        or (config.get("projects") or {}).get(version)
+    # a project typed into the UI wins over the configured default for this target
+    if project_name:
+        chosen = {"name": project_name}
+    else:
+        chosen = (((config.get("projectsByTarget") or {}).get(target) or {}).get(version)
+                  or (config.get("projects") or {}).get(version))
     if not chosen:
-        raise ValueError("no portal project configured for {0} / {1}".format(target, version))
+        raise ValueError("no portal project configured for {0} / {1} - type a Project Name "
+                         "in the Target panel, or add one to config.json".format(target, version))
 
     used = attempted_physical_cards()
     used.update(str(value) for value in extra_exclude if value)
 
-    # the physical card should belong to the service the card was applied for
-    try:
-        prefer = resolve_body("apply_card", target, version).get("serviceId")
-    except Exception:
-        prefer = None
+    # the physical card must belong to the service the card was actually applied for:
+    # an explicit ask first, then the last real Apply Card, then the config default
+    if not prefer:
+        prefer = last_applied_service(target, version)
+    if not prefer:
+        try:
+            prefer = resolve_body("apply_card", target, version).get("serviceId")
+        except Exception:
+            prefer = None
 
     result = client.pick_card(chosen.get("name"), exclude=used, prefer_service=prefer)
     result["project"] = chosen.get("name")
     return result
 
 
+def selected_asp(payload):
+    """The ASP id of the affiliate+version chosen in the UI.
+
+    An explicit aspId in the payload wins (the header field can be edited by hand); otherwise it
+    comes from config.json. A placeholder such as CHANGE_ME is not an ASP id and resolves to ''.
+    """
+    explicit = str(payload.get("aspId") or "").strip()
+    if asp_code(explicit):
+        return explicit
+    try:
+        value = (store.connection(payload.get("target", ""), payload.get("version", "")) or {}).get("aspId")
+    except Exception:
+        value = ""
+    return str(value or "").strip()
+
+
+def api_portal_projects(payload):
+    """The portal projects that belong to the selected affiliate - nothing from another ASP.
+
+    This is what the Project picker lists, so Burger King never offers an iKuka project and so
+    the serviceIds that follow from that project can only be that affiliate's own.
+    """
+    client, config = card_source_client()
+    if not config.get("enabled"):
+        raise ValueError("cardSource is disabled in config.json")
+    asp = selected_asp(payload)
+    try:
+        projects, filtered = client.projects_for_asp(asp, refresh=bool(payload.get("refresh")))
+    except PortalError as error:
+        return {"ok": False, "error": str(error), "projects": []}
+    return {
+        "ok": True,
+        "aspId": asp,
+        "filtered": filtered,
+        "projects": projects,
+        "note": "" if filtered else
+                "This affiliate has no ASP ID in config.json yet, so every project on the portal "
+                "account is listed. Set its aspId to narrow this down.",
+    }
+
+
+def api_project_lookup(payload):
+    """Look a project up on the QA portal by the name the user picked.
+
+    Reads the Summary tab for the ASP ID, the Credentials tab for the OASL access key, and the
+    project's card services - so the UI can fill X-KM-User-AspId and X-KM-Access-Key and offer
+    the right serviceIds on Apply Card. The lookup is refused when the project belongs to a
+    different affiliate than the one selected.
+    """
+    client, config = card_source_client()
+    if not config.get("enabled"):
+        raise ValueError("cardSource is disabled in config.json")
+    name = (payload.get("projectName") or "").strip()
+    if not name:
+        raise ValueError("no project name given")
+    try:
+        result = client.lookup_project(name, expected_asp=selected_asp(payload))
+    except PortalError as error:
+        return {"ok": False, "error": str(error), "projectName": name}
+    result["ok"] = True
+    return result
+
+
+def api_card_stock(payload):
+    """How many test cards a project holds, per service, and how many are actually usable.
+
+    "Usable" is not the same as ACTIVE: the portal keeps showing a card as ACTIVE after it has
+    been handed out, so a card this tool has already sent is counted as used however the portal
+    reports it. That is the number that decides whether the next Card Registration can run.
+    """
+    client, config = card_source_client()
+    if not config.get("enabled"):
+        raise ValueError("cardSource is disabled in config.json")
+    target, version = payload.get("target", ""), payload.get("version", "")
+    name = (payload.get("projectName") or "").strip()
+    if not name:
+        chosen = (((config.get("projectsByTarget") or {}).get(target) or {}).get(version)
+                  or (config.get("projects") or {}).get(version) or {})
+        name = (chosen or {}).get("name", "")
+    if not name:
+        return {"ok": False, "error": "No project to look at - load one first."}
+
+    try:
+        project_id = client.project_id(name)
+        services = client.card_services(project_id)
+        rows, page_info = (client.cards_page(project_id, [s["serviceId"] for s in services])
+                           if services else ([], None))
+    except PortalError as error:
+        return {"ok": False, "error": str(error), "projectName": name}
+
+    mapping = (config.get("fieldMap") or {})
+    number_key = mapping.get("physicalCardNo", "cardNo")
+    wanted = (config.get("statusFilter") or "ACTIVE").upper()
+    used = attempted_physical_cards()
+
+    by_service = {}
+    for service in services:
+        by_service[service["serviceId"]] = {
+            "serviceId": service["serviceId"], "name": service.get("name") or "",
+            "total": 0, "active": 0, "free": 0, "usedHere": 0, "statuses": {},
+        }
+    for row in rows:
+        key = str(row.get("serviceId", "") or "")
+        slot = by_service.get(key)
+        if slot is None:
+            slot = by_service.setdefault(key, {"serviceId": key, "name": "(not in this project)",
+                                               "total": 0, "active": 0, "free": 0,
+                                               "usedHere": 0, "statuses": {}})
+        status = ""
+        for candidate in ("status", "cardStatus", "cardStatusCode"):
+            if row.get(candidate) is not None:
+                status = str(row.get(candidate)).upper()
+                break
+        slot["total"] += 1
+        slot["statuses"][status or "?"] = slot["statuses"].get(status or "?", 0) + 1
+        if status != wanted:
+            continue
+        slot["active"] += 1
+        if str(row.get(number_key, "") or "") in used:
+            slot["usedHere"] += 1
+        else:
+            slot["free"] += 1
+
+    services_out = sorted(by_service.values(), key=lambda item: item["serviceId"])
+    return {
+        "ok": True,
+        "projectName": name,
+        "projectId": project_id,
+        "statusFilter": wanted,
+        "truncated": bool((page_info or {}).get("totalPage", 1) > 1),
+        "services": services_out,
+        "totals": {
+            "services": len(services_out),
+            "total": sum(s["total"] for s in services_out),
+            "active": sum(s["active"] for s in services_out),
+            "free": sum(s["free"] for s in services_out),
+            "usedHere": sum(s["usedHere"] for s in services_out),
+        },
+    }
+
+
 def api_card_source(payload):
     """Fetch one unused ACTIVE physical card for the selected target from the QA portal."""
     target, version = payload.get("target", ""), payload.get("version", "")
     try:
-        result = pick_portal_card(target, version, payload.get("exclude") or [])
+        result = pick_portal_card(target, version, payload.get("exclude") or [],
+                                  project_name=payload.get("projectName"),
+                                  prefer=payload.get("serviceId"))
     except PortalError as error:
         return {"ok": False, "error": str(error)}
     result["ok"] = True
@@ -660,6 +888,9 @@ ROUTES = {
     "/api/history": api_history,
     "/api/records": api_records,
     "/api/card-source": api_card_source,
+    "/api/card-stock": api_card_stock,
+    "/api/project-lookup": api_project_lookup,
+    "/api/portal-projects": api_portal_projects,
     "/api/session-seed": api_session_seed,
 }
 

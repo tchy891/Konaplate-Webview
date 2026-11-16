@@ -182,7 +182,6 @@ code{font-family:var(--mono);background:var(--surface-2);color:var(--accent-ink)
 .pill.is-on{background:var(--accent-fill);border-color:var(--accent-fill);color:var(--on-accent)}
 /* offered but not usable yet - no access key configured for that target */
 .pill--todo{color:var(--muted);border-style:dashed}
-.pill--todo::after{content:" \00b7 no key";font-size:10.5px;font-weight:600;opacity:.85}
 .pill--todo.is-on{background:var(--surface-3);border-color:var(--amber);color:var(--text-soft)}
 
 .grid{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px}
@@ -220,6 +219,21 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .actions--footer{border-top:1px solid var(--line-soft);padding-top:13px;margin-top:14px}
 .check{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-soft);font-weight:600;cursor:pointer}
 .check input{width:auto;accent-color:var(--accent-fill)}
+
+/* Run All module picker - one tick box per module, wrapping across the row */
+.modpicks{display:flex;align-items:center;gap:8px 16px;flex-wrap:wrap;flex:1 1 auto;min-width:0}
+.modpick{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;
+  color:var(--text-soft);cursor:pointer;white-space:nowrap}
+.modpick input{width:auto;accent-color:var(--accent-fill)}
+/* a module that belongs under another one is marked the same way as in the sidebar */
+.modpick--child{color:var(--muted);padding-left:11px;border-left:2px solid var(--line)}
+/* the card type belongs to Apply Card, so it is indented under it rather than listed beside it */
+.modpick--sub{font-weight:500;color:var(--muted);margin-left:-6px;padding-left:12px;
+  border-left:2px solid var(--line)}
+.modpick--sub.is-off{opacity:.5}
+.btn--link{background:none;border:none;padding:0 2px;color:var(--accent);font-weight:700;
+  font-size:12px;text-decoration:underline;cursor:pointer}
+.btn--link:hover{color:var(--accent-fill)}
 .note{font-size:12px;color:var(--muted)}
 
 /* ----------------------------------------------------------- tabs */
@@ -233,8 +247,20 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 
 /* ----------------------------------------------------------- dynamic form */
 .fields{display:flex;flex-direction:column;gap:8px;max-height:430px;overflow:auto;padding-right:4px}
-.frow{display:grid;grid-template-columns:185px 1fr;align-items:center;gap:12px}
-.frow>label{font-size:12px;font-weight:700;color:var(--text-soft);display:flex;align-items:center;gap:7px}
+/* the variant switcher: one module page, several separate requests behind it */
+.row--variant{margin-bottom:10px}
+/* a small info mark on anything that carries its own tooltip, so the hover is discoverable */
+.pill--hint::after,.modpick--hint::after{content:" \24D8";opacity:.7;font-size:11px}
+.variantnote{margin:-4px 0 12px;font-size:11.5px}
+.row--variant.is-hidden,.variantnote.is-hidden{display:none}
+
+.frow{display:grid;grid-template-columns:210px minmax(0,1fr);align-items:center;gap:12px}
+/* The label holds the field name plus its resolved-value tag. It may wrap onto a second line -
+   a long name with a long value does not fit one - and the row grows to show it. It must NOT
+   be clipped: that is what hid the cardApplyNo tag while the shorter userId one showed. */
+.frow>label{font-size:12px;font-weight:700;color:var(--text-soft);display:flex;
+  align-items:center;flex-wrap:wrap;gap:4px 7px;min-width:0;padding:3px 0}
+.frow>label .tag{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .frow input,.frow select,.frow textarea{background:var(--surface)}
 .frow textarea{min-height:52px;resize:vertical}
 .frow--auto input{background:var(--surface-2);color:var(--accent);font-weight:600}
@@ -353,3 +379,12 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
   box-shadow:0 10px 28px var(--shadow-strong);border-left:4px solid var(--accent);
 }
 .toast.is-on{opacity:1;transform:none}
+
+/* ----------------------------------------------------------- project row */
+.projectrow{display:flex;gap:9px;align-items:center;flex:1 1 auto;min-width:0}
+.projectrow input,.projectrow select{flex:1 1 auto;min-width:0}
+.projectrow input[hidden]{display:none}
+.projectrow .btn{flex:0 0 auto}
+/* the refresh glyph sits next to Load from portal - keep it square, not word-width */
+#btnRefreshProjects{padding:0 11px;font-size:15px;line-height:1}
+.select--narrow{max-width:340px}

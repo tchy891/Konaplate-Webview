@@ -105,7 +105,11 @@
             "bank_account_inquiry": "/web-view/api/v1/bankaccounts/inquiry",
             "pg_info_inquiry": "/web-view/api/v1/bankaccounts/pg-info/inquiry",
             "apply_card": "/web-view/api/v1/prepay-card/issue/delivery",
-            "card_registration": "/web-view/api/v1/prepay-card/physical/register"
+            "card_registration": "/web-view/api/v1/prepay-card/physical/register",
+            "auto_recharge_bank_registration": "/web-view/api/v1/user/registration",
+            "auto_recharge_bank_registration_change_account": "/web-view/api/v1/user/registration",
+            "user_registration_without_ci": "/web-view/api/v1/user/registration",
+            "user_registration_without_ci_auto_recharge": "/web-view/api/v1/user/registration"
           }
         },
         "V2": {
@@ -119,7 +123,11 @@
             "bank_account_inquiry": "/web-view/api/v1/bankaccounts/inquiry",
             "pg_info_inquiry": "/web-view/api/v1/bankaccounts/pg-info/inquiry",
             "apply_card": "/web-view/api/v1/prepay-card/issue/delivery",
-            "card_registration": "/web-view/api/v1/prepay-card/physical/register"
+            "card_registration": "/web-view/api/v1/prepay-card/physical/register",
+            "auto_recharge_bank_registration": "/web-view/api/v1/user/registration",
+            "auto_recharge_bank_registration_change_account": "/web-view/api/v1/user/registration",
+            "user_registration_without_ci": "/web-view/api/v1/user/registration",
+            "user_registration_without_ci_auto_recharge": "/web-view/api/v1/user/registration"
           }
         }
       }
@@ -129,7 +137,7 @@
       "versions": {
         "V1": {
           "baseUrl": "http://10.30.210.153:15890",
-          "aspId": "CHANGE_ME",
+          "aspId": "000163000000000",
           "accessKey": "CHANGE_ME",
           "endpoints": {
             "user_registration": "/web-view/api/v1/user/registration",
@@ -137,12 +145,16 @@
             "bank_account_inquiry": "/web-view/api/v1/bankaccounts/inquiry",
             "pg_info_inquiry": "/web-view/api/v1/bankaccounts/pg-info/inquiry",
             "apply_card": "/web-view/api/v1/prepay-card/issue/delivery",
-            "card_registration": "/web-view/api/v1/prepay-card/physical/register"
+            "card_registration": "/web-view/api/v1/prepay-card/physical/register",
+            "auto_recharge_bank_registration": "/web-view/api/v1/user/registration",
+            "auto_recharge_bank_registration_change_account": "/web-view/api/v1/user/registration",
+            "user_registration_without_ci": "/web-view/api/v1/user/registration",
+            "user_registration_without_ci_auto_recharge": "/web-view/api/v1/user/registration"
           }
         },
         "V2": {
           "baseUrl": "http://10.30.210.153:15890",
-          "aspId": "CHANGE_ME",
+          "aspId": "000163000000000",
           "accessKey": "CHANGE_ME",
           "endpoints": {
             "user_registration": "/web-view/api/v1/user/registration",
@@ -150,7 +162,11 @@
             "bank_account_inquiry": "/web-view/api/v1/bankaccounts/inquiry",
             "pg_info_inquiry": "/web-view/api/v1/bankaccounts/pg-info/inquiry",
             "apply_card": "/web-view/api/v1/prepay-card/issue/delivery",
-            "card_registration": "/web-view/api/v1/prepay-card/physical/register"
+            "card_registration": "/web-view/api/v1/prepay-card/physical/register",
+            "auto_recharge_bank_registration": "/web-view/api/v1/user/registration",
+            "auto_recharge_bank_registration_change_account": "/web-view/api/v1/user/registration",
+            "user_registration_without_ci": "/web-view/api/v1/user/registration",
+            "user_registration_without_ci_auto_recharge": "/web-view/api/v1/user/registration"
           }
         }
       }
@@ -210,11 +226,24 @@
               "664160"
             ]
           },
-          "V2": {}
+          "V2": {
+            "tcIdList": [
+              "664156",
+              "664160"
+            ]
+          }
         },
         "IKUKA": {
-          "V1": {},
-          "V2": {}
+          "V1": {
+            "tcIdList": [
+              "668151"
+            ]
+          },
+          "V2": {
+            "tcIdList": [
+              "668151"
+            ]
+          }
         }
       }
     },
@@ -309,6 +338,10 @@
           {
             "value": "000187000010000",
             "label": "000187000010000 — prepay card (from the sample cURL)"
+          },
+          {
+            "value": "000163000013000",
+            "label": "000163000013000 — iKuka Service 1 (placeholder until a project is loaded)"
           }
         ],
         "isDeliveryRequired": [
@@ -328,8 +361,21 @@
           "V2": {}
         },
         "IKUKA": {
-          "V1": {},
-          "V2": {}
+          "V1": {
+            "userInfo": {
+              "userId": "{{userId}}",
+              "addressInfo": {
+                "address": "서울특별시 영등포구 은행로 3",
+                "addressDetail": "8층",
+                "zipCode": "12345"
+              }
+            },
+            "serviceId": "000163000013000",
+            "isDeliveryRequired": true
+          },
+          "V2": {
+            "serviceId": "000163000013000"
+          }
         }
       }
     },
@@ -377,6 +423,289 @@
         "IKUKA": {
           "V1": {},
           "V2": {}
+        }
+      }
+    },
+    "auto_recharge_bank_registration": {
+      "order": 2.1,
+      "label": "Auto Recharge",
+      "method": "POST",
+      "randomize": [
+        "ci",
+        "loginId",
+        "email"
+      ],
+      "body": {
+        "ci": "KONAPL58K9WELg9LKDLNKS9ltsNgVNdEuRYRsDFcrC52JTGxG2Mp27kvSiMpH5oO475Gegfc43gDOLwmNh36rt59",
+        "loginId": "w1alnrc1m@yahoo.com",
+        "loginPassword": "112233",
+        "birthDate": "19920211",
+        "nationality": "Korean",
+        "gender": "Male",
+        "userName": "기충종",
+        "mobileNumber": "01087341335",
+        "email": "w1c1sro11b@yahoo.com",
+        "joinChannel": "OPENAPI",
+        "addressInfo": {
+          "zipCode": "12345",
+          "address": "서울특별시 영등포구 은행로 3",
+          "addressDetail": "8층"
+        },
+        "tcIdList": [
+          "664156",
+          "664160"
+        ]
+      },
+      "overrides": {
+        "BURGER_KING": {
+          "V1": {
+            "tcIdList": [
+              "664156",
+              "664160"
+            ]
+          },
+          "V2": {
+            "tcIdList": [
+              "664156",
+              "664160"
+            ]
+          }
+        },
+        "IKUKA": {
+          "V1": {
+            "tcIdList": [
+              "668151"
+            ]
+          },
+          "V2": {
+            "tcIdList": [
+              "668151"
+            ]
+          }
+        }
+      },
+      "runAllDefault": false,
+      "parent": "bank_account_registration",
+      "tooltip": [
+        "Auto Recharge — ARS test account",
+        "",
+        "bankCode      090",
+        "bankName      카카오뱅크",
+        "dateOfBirth   19850416",
+        "bankAccount   3333030304630",
+        "name          이지혜",
+        "mobileNumber  a number that can receive ARS calls"
+      ],
+      "role": "user_registration",
+      "_roleNote": "The cURL this was built from calls /user/registration and returns a userId, so it counts as a user registration in Records and in the session. Change this when the real auto-recharge endpoint is wired in."
+    },
+    "auto_recharge_bank_registration_change_account": {
+      "order": 2.2,
+      "label": "Auto Recharge- Change Account",
+      "method": "POST",
+      "randomize": [
+        "ci",
+        "loginId",
+        "email"
+      ],
+      "runAllDefault": false,
+      "_note": "Built from the pasted cURL, whose access key 6167e69-15cc...07e1e belongs to the portal project 'Revamped-P3-P4-BK'. Load that project in the Project field and the ASP ID and key come from it.",
+      "body": {
+        "ci": "KONAPL58K9WELg9LKDLN3S9ltsSNgVNdEuRYRsDFLaC5JTGxG2Mp27kvSiMpH5oO475Gegfc43gDOLwmNh36rt59",
+        "loginId": "w1alntuc1m@yahoo.com",
+        "loginPassword": "112233",
+        "birthDate": "19820716",
+        "nationality": "Korean",
+        "gender": "Male",
+        "userName": "충먹금",
+        "mobileNumber": "01087341335",
+        "email": "w1c1safo11b@yahoo.com",
+        "joinChannel": "OPENAPI",
+        "addressInfo": {
+          "zipCode": "12345",
+          "address": "서울특별시 영등포구 은행로 3",
+          "addressDetail": "8층"
+        },
+        "tcIdList": [
+          "664156",
+          "664160"
+        ]
+      },
+      "overrides": {
+        "BURGER_KING": {
+          "V1": {
+            "tcIdList": [
+              "664156",
+              "664160"
+            ]
+          },
+          "V2": {
+            "tcIdList": [
+              "664156",
+              "664160"
+            ]
+          }
+        },
+        "IKUKA": {
+          "V1": {
+            "tcIdList": [
+              "668151"
+            ]
+          },
+          "V2": {
+            "tcIdList": [
+              "668151"
+            ]
+          }
+        }
+      },
+      "parent": "bank_account_registration",
+      "role": "user_registration",
+      "_roleNote": "The cURL this was built from calls /user/registration and returns a userId, so it counts as a user registration in Records and in the session. Change this when the real auto-recharge endpoint is wired in."
+    },
+    "user_registration_without_ci": {
+      "order": 1.1,
+      "label": "Without CI",
+      "method": "POST",
+      "parent": "user_registration",
+      "runAllDefault": false,
+      "randomize": [
+        "loginId",
+        "email"
+      ],
+      "randomFields": {
+        "loginId": {
+          "type": "email",
+          "localLength": 8,
+          "domain": "dispostable.com",
+          "charset": "lower_alphanumeric"
+        },
+        "email": {
+          "type": "email",
+          "localLength": 9,
+          "domain": "dispostable.com",
+          "charset": "lower_alphanumeric"
+        }
+      },
+      "body": {
+        "loginId": "t67Mb63@dispostable.com",
+        "loginPassword": "112233",
+        "birthDate": "19811128",
+        "nationality": "Korean",
+        "gender": "Male",
+        "userName": "전경영",
+        "mobileNumber": "01087341335",
+        "email": "t6117b63@dispostable.com",
+        "joinChannel": "OPENAPI",
+        "addressInfo": {
+          "zipCode": "12345",
+          "address": "서울특별시 영등포구 은행로 3",
+          "addressDetail": "8층"
+        },
+        "tcIdList": [
+          "664156",
+          "664160"
+        ]
+      },
+      "overrides": {
+        "BURGER_KING": {
+          "V1": {
+            "tcIdList": [
+              "664156",
+              "664160"
+            ]
+          },
+          "V2": {
+            "tcIdList": [
+              "664156",
+              "664160"
+            ]
+          }
+        },
+        "IKUKA": {
+          "V1": {
+            "tcIdList": [
+              "668151"
+            ]
+          },
+          "V2": {
+            "tcIdList": [
+              "668151"
+            ]
+          }
+        }
+      }
+    },
+    "user_registration_without_ci_auto_recharge": {
+      "order": 1.2,
+      "label": "Without CI- Auto Recharge",
+      "method": "POST",
+      "parent": "user_registration",
+      "runAllDefault": false,
+      "randomize": [
+        "loginId",
+        "email"
+      ],
+      "randomFields": {
+        "loginId": {
+          "type": "email",
+          "localLength": 8,
+          "domain": "dispostable.com",
+          "charset": "lower_alphanumeric"
+        },
+        "email": {
+          "type": "email",
+          "localLength": 9,
+          "domain": "dispostable.com",
+          "charset": "lower_alphanumeric"
+        }
+      },
+      "body": {
+        "loginId": "t671dh63@dispostable.com",
+        "loginPassword": "112233",
+        "birthDate": "19920211",
+        "nationality": "Korean",
+        "gender": "Male",
+        "userName": "기충종",
+        "mobileNumber": "01087341335",
+        "email": "t611063@dispostable.com",
+        "joinChannel": "OPENAPI",
+        "addressInfo": {
+          "zipCode": "12345",
+          "address": "서울특별시 영등포구 은행로 3",
+          "addressDetail": "8층"
+        },
+        "tcIdList": [
+          664156,
+          664160
+        ]
+      },
+      "overrides": {
+        "BURGER_KING": {
+          "V1": {
+            "tcIdList": [
+              664156,
+              664160
+            ]
+          },
+          "V2": {
+            "tcIdList": [
+              664156,
+              664160
+            ]
+          }
+        },
+        "IKUKA": {
+          "V1": {
+            "tcIdList": [
+              668151
+            ]
+          },
+          "V2": {
+            "tcIdList": [
+              668151
+            ]
+          }
         }
       }
     }

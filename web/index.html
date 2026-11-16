@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <title>KONA WebView Helper</title>
 <link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="flowchart.css">
+<link rel="stylesheet" href="assistant.css">
 <script>
   /* set the theme before first paint so there is no flash of the wrong one */
   (function () {
@@ -51,6 +53,15 @@
              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="12" cy="12" r="8.4"/><path d="M10.2 8.6 15.6 12l-5.4 3.4z"/>
         </svg> Run All Modules
+      </button>
+      <button class="nav__item" data-page="howitworks">
+        <!-- three linked nodes: the shape of the chain this page explains -->
+        <svg class="nav__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="5.5" cy="12" r="2.4"/><circle cx="18.5" cy="6.5" r="2.4"/>
+          <circle cx="18.5" cy="17.5" r="2.4"/>
+          <path d="M7.7 10.9 16.3 7.6M7.7 13.1 16.3 16.4"/>
+        </svg> How It Works
       </button>
 
       <div class="nav__section">Tools</div>
@@ -121,6 +132,22 @@
               <div class="pills" id="versionPills"></div>
             </div>
 
+            <div class="row">
+              <label class="row__label">Project</label>
+              <div class="projectrow">
+                <select id="projectPick" class="mono"></select>
+                <input id="projectName" class="mono" spellcheck="false" hidden
+                       placeholder="Project Name exactly as it appears in the portal">
+                <button class="btn" id="btnRefreshProjects" title="Re-read this affiliate&#39;s projects from the portal">&#8635;</button>
+                <button class="btn" id="btnLoadProject">Load from portal</button>
+              </div>
+            </div>
+            <p class="note" id="projectNote">
+              Pick one of this affiliate&#39;s own projects and load it: the ASP ID and Access Key
+              below are filled from that project, and only that project&#39;s card services become
+              the serviceId choices on Apply Card.
+            </p>
+
             <div class="grid">
               <div class="field field--wide">
                 <label>Base URL</label>
@@ -163,6 +190,13 @@
               <span class="panel__hint" id="requestHint">Body · randomized fields</span>
             </div>
             <div class="panel__body">
+              <!-- shown only for a module that has variants: each one is its own cURL -->
+              <div class="row row--variant is-hidden" id="variantRow">
+                <label class="row__label">Request</label>
+                <div class="pills" id="variantPills"></div>
+              </div>
+              <p class="note variantnote is-hidden" id="variantNote"></p>
+
               <div class="grid">
                 <div class="field field--sm">
                   <label>Method</label>
@@ -258,7 +292,7 @@
         <section class="panel panel--accent">
           <div class="panel__head">
             <span>RUN ALL MODULES</span>
-            <span class="panel__hint">Every module in order, chained on one freshly created user</span>
+            <span class="panel__hint">The modules you tick, in order, chained on one user</span>
           </div>
           <div class="panel__body">
             <div class="row">
@@ -266,9 +300,31 @@
               <div class="pills" id="runAllTarget"></div>
             </div>
 
+            <div class="row">
+              <label class="row__label">Project</label>
+              <div class="projectrow">
+                <select id="runProjectPick" class="mono"></select>
+                <input id="runProjectName" class="mono" spellcheck="false" hidden
+                       placeholder="Project Name exactly as it appears in the portal">
+                <button class="btn" id="btnRunLoadProject">Load from portal</button>
+              </div>
+            </div>
+            <div class="row">
+              <label class="row__label">Service ID</label>
+              <div class="projectrow">
+                <select id="runServiceId" class="mono select--narrow"></select>
+              </div>
+            </div>
+            <p class="note" id="runProjectNote"></p>
+
+            <div class="row">
+              <label class="row__label">Modules</label>
+              <div class="modpicks" id="runModules"></div>
+            </div>
+            <p class="note" id="runModulesNote"></p>
+
             <div class="actions">
               <label class="check"><input type="checkbox" id="runBoth"> Run V1 and V2, one after the other</label>
-              <label class="check"><input type="checkbox" id="runPhysical" checked> Apply a physical card (delivery)</label>
               <label class="check"><input type="checkbox" id="runStopOnFail" checked> Stop on first failure</label>
               <div class="field field--sm">
                 <label>Settle (s)</label>
@@ -281,10 +337,50 @@
               <button class="btn btn--primary" id="btnRunAll">Run All Modules</button>
               <button class="btn" id="btnRunCancel" disabled>Cancel</button>
               <button class="btn" id="btnRunClear" disabled title="Clear the results above and start fresh">Refresh</button>
-              <span class="note" id="runAllNote">Runs User Registration first, then feeds its userId through every later module.</span>
+              <span class="note" id="runAllNote">Runs the ticked modules in order, feeding each result into the next.</span>
             </div>
 
             <div id="runProgress" class="runlist"></div>
+          </div>
+        </section>
+      </section>
+
+      <!-- ============================== HOW IT WORKS PAGE -->
+      <section class="page is-hidden" id="page-howitworks">
+        <section class="panel panel--accent">
+          <div class="panel__head">
+            <span>THE CHAIN</span>
+            <span class="panel__hint">Six calls, each one feeding the next</span>
+          </div>
+          <div class="panel__body">
+            <div class="flowbar">
+              <button class="btn btn--primary" id="flowPlay">Play</button>
+              <button class="btn" id="flowRecord" title="Record the animation as an MP4 file">
+                Download MP4</button>
+              <span class="flowbar__state" id="flowState"></span>
+              <span class="flowbar__spacer"></span>
+              <span class="flowbar__hint">Click any step to read about it</span>
+            </div>
+            <p class="note flowrec" id="flowRecNote" hidden></p>
+
+            <div class="flowwrap" id="flowChainHost"></div>
+
+            <div class="flowlegend">
+              <span class="flowlegend__i"><span class="flowlegend__sw flowlegend__sw--now"></span>
+                Running now</span>
+              <span class="flowlegend__i"><span class="flowlegend__sw flowlegend__sw--done"></span>
+                Done, value captured</span>
+              <span class="flowlegend__i"><span class="flowlegend__sw"></span>Waiting</span>
+              <span class="flowlegend__i"><span class="flowlegend__sw flowlegend__sw--portal"></span>
+                Comes from the User Portal</span>
+            </div>
+
+            <div class="flowdetail" id="flowDetail"></div>
+
+            <p class="note" style="margin-top:12px">
+              The written version of all this, for someone who has never opened the tool, is
+              <code>docs/HOW-IT-WORKS.md</code> in the project folder.
+            </p>
           </div>
         </section>
       </section>
@@ -320,7 +416,8 @@
             <div class="tablewrap tablewrap--tall">
               <table class="table" id="recordsTable">
                 <thead><tr>
-                  <th>Registered</th><th>Affiliate</th><th>WV</th><th>User ID</th><th>Login ID</th>
+                  <th>Registered</th><th>Affiliate</th><th>WV</th><th>Project Name</th>
+                  <th>User ID</th><th>Login ID</th>
                   <th>Card Apply No</th><th>Mobile Card No</th><th>Physical Card No</th><th>Card Type</th>
                   <th>Next step</th>
                 </tr></thead>
@@ -346,7 +443,7 @@
             </div>
             <div class="tablewrap">
               <table class="table" id="historyTable">
-                <thead><tr><th>Time</th><th>Feature</th><th>Affiliate</th><th>WebView</th><th>Status</th><th>ms</th></tr></thead>
+                <thead><tr><th>Time</th><th>Feature</th><th>Affiliate</th><th>WebView</th><th>Project Name</th><th>Status</th><th>ms</th></tr></thead>
                 <tbody></tbody>
               </table>
             </div>
@@ -386,5 +483,8 @@
 
 <div class="toast" id="toast"></div>
 <script src="app.js"></script>
+<script src="flowchart.js"></script>
+<script src="flowvideo.js"></script>
+<script src="assistant.js"></script>
 </body>
 </html>

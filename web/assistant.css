@@ -1,0 +1,352 @@
+/* ============================================================================
+   Chip - the console's built-in assistant.
+
+   Placement: Chip is a card half-dipped into a reader slot on the RIGHT EDGE of
+   the window. The slot graphic is drawn OVER the card's right edge, so he reads
+   as inserted rather than floating. Click and he is pulled out of the reader and
+   unfolds into the chat sheet; close and he dips back in. He can be dragged up
+   and down the rail, and his position is remembered.
+
+   Everything here uses the same tokens as the rest of the console, so light and
+   dark mode need no second set of rules.
+   ========================================================================== */
+
+/* ------------------------------------------------------------------ the dock */
+/* Relay stands in the bottom-right corner, the way a support bot does, and the panel opens
+   above it. Dragging moves it up and down that edge; the position is remembered. */
+.chipdock{
+  position:fixed;right:var(--chip-right,22px);bottom:var(--chip-bottom,20px);
+  z-index:70;display:flex;align-items:flex-end;user-select:none;touch-action:none;
+}
+
+/* ------------------------------------------------------------ the card itself */
+.chipmate{
+  position:relative;z-index:1;
+  width:88px;height:110px;padding:0;border:0;background:none;cursor:grab;
+  filter:drop-shadow(0 12px 22px var(--accent-glow));
+  animation:chipBob 3.4s ease-in-out infinite;
+  transition:transform .22s cubic-bezier(.2,.9,.3,1.4);
+}
+.chipmate:hover{transform:translateY(-5px) scale(1.07);filter:drop-shadow(0 14px 26px var(--accent-glow))}
+.chipmate:active{cursor:grabbing}
+.chipmate:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:12px}
+.chipdock.is-dragging .chipmate{animation:none;transform:scale(1.04)}
+.chipdock.is-open .chipmate{animation:none;transform:scale(.94)}
+
+/* a ring that pings until Chip has been opened once */
+.chipmate::after{
+  content:"";position:absolute;left:11%;right:11%;top:11%;height:50%;border-radius:16px;
+  border:2px solid var(--accent-fill);opacity:0;pointer-events:none;
+}
+.chipdock.has-news .chipmate::after{animation:chipPing 2.6s ease-out infinite}
+
+/* the unread dot */
+.chipmate__dot{
+  position:absolute;top:8px;right:4px;width:11px;height:11px;border-radius:50%;
+  background:var(--teal);border:2px solid var(--bg);opacity:0;transition:opacity .2s ease;
+}
+.chipdock.has-news .chipmate__dot{opacity:1}
+
+/* The mascot is alive without being a cartoon: it floats, its shadow breathes with it, it
+   blinks, its soles and antenna glow, and it waves when you point at it. Thinking speeds the
+   antenna up and narrows the eyes, so you can see it working from across the room. */
+.chipmate__eye{transform-box:fill-box;transform-origin:center;
+  animation:relayBlink 5.4s infinite}
+.chipmate__eye:nth-of-type(2){animation-delay:.06s}
+.chipmate__ping{transform-box:fill-box;transform-origin:center;
+  animation:relayPing 2.6s ease-in-out infinite}
+.chipmate__sole{animation:relayGlow 2.6s ease-in-out infinite}
+.chipmate__sole:nth-of-type(2){animation-delay:.35s}
+.chipmate__shadow{transform-box:fill-box;transform-origin:center;
+  animation:relayShadow 3.4s ease-in-out infinite}
+.chipmate__arm{transform-box:fill-box;transition:transform .25s cubic-bezier(.3,.9,.4,1.4)}
+.chipmate__arm--l{transform-origin:85% 10%}
+.chipmate__arm--r{transform-origin:15% 10%}
+.chipmate:hover .chipmate__arm--l{transform:rotate(-26deg)}
+.chipmate:hover .chipmate__arm--r{transform:rotate(26deg)}
+
+.chipdock.is-thinking .chipmate__ping{animation-duration:.8s}
+.chipdock.is-thinking .chipmate__eye{animation:relayScan 1.1s ease-in-out infinite}
+.chipdock.is-open .chipmate__arm--r{transform:rotate(18deg)}
+
+@keyframes chipBob{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-6px)}
+}
+@keyframes relayBlink{
+  0%,93%,100%{transform:scaleY(1)}
+  95%,97%{transform:scaleY(.12)}
+}
+@keyframes relayScan{
+  0%,100%{transform:scaleY(.55)}
+  50%{transform:scaleY(1)}
+}
+@keyframes relayPing{
+  0%,100%{opacity:.65;transform:scale(.9)}
+  50%{opacity:1;transform:scale(1.18)}
+}
+@keyframes relayGlow{0%,100%{opacity:.6}50%{opacity:1}}
+@keyframes relayShadow{
+  0%,100%{transform:scaleX(1);opacity:.28}
+  50%{transform:scaleX(.82);opacity:.18}
+}
+@keyframes chipPing{
+  0%{transform:scale(.9);opacity:.7}
+  70%{transform:scale(1.5);opacity:0}
+  100%{opacity:0}
+}
+@media (prefers-reduced-motion:reduce){
+  .chipmate,.chipmate__eye,.chipmate__ping,.chipmate__sole,.chipmate__shadow,
+  .chipdock.has-news .chipmate::after{animation:none}
+}
+
+/* ------------------------------------------------------------- the chat sheet */
+/* Docked to the bottom-right above Relay, the way a support widget opens. */
+.chipchat{
+  position:fixed;right:var(--chip-right,22px);bottom:calc(var(--chip-bottom,20px) + 118px);
+  z-index:71;
+  width:min(380px,calc(100vw - 44px));height:min(560px,calc(100vh - 160px));
+  display:flex;flex-direction:column;overflow:hidden;
+  background:var(--surface);border:1px solid var(--line);border-radius:16px;
+  box-shadow:0 24px 60px var(--shadow-strong),0 0 0 1px var(--shadow);
+  transform-origin:bottom right;
+  animation:chipOpen .24s cubic-bezier(.2,.9,.3,1.2);
+}
+.chipchat[hidden]{display:none}
+/* the expand control doubles the room without leaving the corner */
+.chipchat.is-big{
+  width:min(620px,calc(100vw - 44px));height:min(820px,calc(100vh - 150px));
+}
+@keyframes chipOpen{
+  from{opacity:0;transform:translateY(18px) scale(.94)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+
+.chipchat__head{
+  display:flex;align-items:center;gap:11px;padding:13px 14px;
+  background:var(--surface-2);color:var(--text);
+  border-bottom:1px solid var(--line);
+}
+/* the mark in a circle, as an avatar */
+.chipchat__face{
+  width:40px;height:40px;flex:0 0 auto;border-radius:50%;padding:5px;
+  background:var(--surface-3);border:1px solid var(--line-hover);
+  display:flex;align-items:center;justify-content:center;
+}
+.chipchat__who{display:flex;flex-direction:column;line-height:1.25;min-width:0}
+.chipchat__name{font-size:14.5px;font-weight:800;letter-spacing:.2px;color:var(--text)}
+.chipchat__role{font-size:11.2px;color:var(--muted);white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
+.chipchat__live{
+  width:6px;height:6px;border-radius:50%;background:#5FD98B;flex:0 0 auto;
+  box-shadow:0 0 0 0 rgba(95,217,139,.7);animation:chipLive 2.4s ease-out infinite;
+}
+@keyframes chipLive{
+  0%{box-shadow:0 0 0 0 rgba(95,217,139,.6)}
+  70%{box-shadow:0 0 0 6px rgba(95,217,139,0)}
+  100%{box-shadow:0 0 0 0 rgba(95,217,139,0)}
+}
+@media (prefers-reduced-motion:reduce){ .chipchat__live{animation:none} }
+.chipchat__btn{
+  background:none;border:0;color:var(--muted);width:28px;height:28px;border-radius:8px;
+  font-size:17px;line-height:1;cursor:pointer;display:flex;align-items:center;
+  justify-content:center;flex:0 0 auto;
+}
+.chipchat__btn:first-of-type{margin-left:auto}
+.chipchat__btn:hover{background:var(--surface-3);color:var(--text)}
+
+.chipchat__body{
+  flex:1 1 auto;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:11px;
+  background:var(--bg);
+}
+.chipchat__foot{
+  border-top:1px solid var(--line);background:var(--surface);padding:10px 12px 12px;
+}
+
+/* --------------------------------------------------------- the greeting */
+/* The bubble that speaks first: beside the mark, pointing at it. */
+.chiptease{
+  position:fixed;right:22px;transform:translateY(12px);
+  z-index:69;width:252px;opacity:0;pointer-events:none;
+  background:var(--surface);color:var(--text-soft);
+  border:1px solid var(--line-hover);border-radius:14px;padding:12px 14px 13px;
+  box-shadow:0 14px 34px var(--shadow-strong);
+  font-size:12.3px;line-height:1.55;cursor:pointer;
+  transition:opacity .25s ease,transform .25s cubic-bezier(.2,.9,.3,1.3);
+}
+.chiptease.is-in{opacity:1;transform:translateY(0);pointer-events:auto}
+.chiptease:hover{border-color:var(--accent-fill)}
+.chiptease b{display:block;color:var(--text);font-size:13px;margin-bottom:3px}
+.chiptease::after{                       /* the tail, pointing down at Relay */
+  content:"";position:absolute;right:28px;bottom:-7px;width:12px;height:12px;
+  background:var(--surface);border-right:1px solid var(--line-hover);
+  border-bottom:1px solid var(--line-hover);transform:rotate(45deg);
+}
+.chiptease__cta{display:block;margin-top:7px;color:var(--accent);font-weight:800;font-size:11.5px}
+.chiptease__x{
+  position:absolute;top:5px;right:7px;background:none;border:0;cursor:pointer;
+  color:var(--muted);font-size:15px;line-height:1;padding:2px 4px;
+}
+.chiptease__x:hover{color:var(--text)}
+@media (max-width:1100px){ .chiptease{display:none} }
+
+/* ------------------------------------------------------------------ messages */
+.chipmsg{max-width:94%;font-size:12.9px;line-height:1.62}
+/* a reply is the mark plus its bubble */
+.chiprow{display:flex;align-items:flex-end;gap:8px;align-self:flex-start;max-width:97%}
+.chipface{width:23px;height:23px;flex:0 0 auto;margin-bottom:2px;opacity:.95}
+.chiprow .chipmsg--bot{max-width:none}
+/* the chips and the reasoning block line up under the bubble, not under the face */
+.chipsuggest,.chipthink{margin-left:31px}
+.chipmsg--bot{
+  align-self:flex-start;background:var(--surface);color:var(--text);
+  border:1px solid var(--line);border-radius:4px 14px 14px 14px;padding:10px 13px;
+}
+.chipmsg--me{
+  align-self:flex-end;background:var(--accent-fill);color:var(--on-accent);
+  border-radius:14px 4px 14px 14px;padding:8px 13px;font-weight:600;
+}
+.chipmsg b{color:var(--accent-ink);font-weight:800}
+.chipmsg--me b{color:inherit}
+.chipmsg code{
+  font-family:var(--mono);font-size:11.6px;background:var(--surface-2);
+  border:1px solid var(--line);border-radius:5px;padding:1px 5px;color:var(--accent-ink);
+  overflow-wrap:anywhere;
+}
+.chipmsg ul{margin:7px 0 2px;padding-left:17px}
+.chipmsg li{margin:3px 0}
+.chipmsg .chipstep{color:var(--muted);font-size:11.5px}
+.chipmsg--bot a{color:var(--accent);font-weight:700}
+
+/* ----------------------------------------------------------- reasoning */
+/* The visible trace: open and spinning while it works, folded to one line when done. */
+.chipthink{
+  align-self:flex-start;max-width:96%;font-size:11.8px;
+  background:var(--surface-2);border:1px solid var(--line);border-radius:11px;
+  padding:7px 11px;color:var(--muted);
+}
+.chipthink__sum{
+  display:flex;align-items:center;gap:8px;cursor:pointer;list-style:none;
+  font-weight:700;color:var(--text-soft);
+}
+.chipthink__sum::-webkit-details-marker{display:none}
+.chipthink__sum::after{
+  content:"\25BE";margin-left:auto;font-size:10px;opacity:.6;transition:transform .15s ease;
+}
+.chipthink[open] .chipthink__sum::after{transform:rotate(180deg)}
+.chipthink__label{letter-spacing:.2px}
+.chipthink__spin{
+  width:11px;height:11px;flex:0 0 auto;border-radius:50%;
+  border:2px solid var(--accent-ring);border-top-color:var(--accent-fill);
+  animation:chipSpinner .7s linear infinite;
+}
+.chipthink.is-done .chipthink__spin{
+  animation:none;border:0;background:var(--teal);width:7px;height:7px;margin:2px;
+}
+@keyframes chipSpinner{to{transform:rotate(360deg)}}
+
+.chipthink__body{
+  margin-top:7px;padding-top:7px;border-top:1px dashed var(--line);
+  display:flex;flex-direction:column;gap:5px;
+}
+.chipthink__step{
+  position:relative;padding-left:15px;line-height:1.55;color:var(--muted);
+}
+.chipthink__step::before{
+  content:"";position:absolute;left:3px;top:7px;width:5px;height:5px;border-radius:50%;
+  background:var(--line-hover);
+}
+.chipthink__step--end::before{background:var(--teal)}
+.chipthink__step b{color:var(--text-soft);font-weight:800}
+.chipthink__step code{
+  font-family:var(--mono);font-size:10.8px;background:var(--surface);
+  border:1px solid var(--line);border-radius:4px;padding:0 4px;color:var(--accent-ink);
+}
+@media (prefers-reduced-motion:reduce){ .chipthink__spin{animation:none} }
+
+/* the typing dots */
+.chipdots{display:inline-flex;gap:4px;align-items:center;padding:3px 2px}
+.chipdots i{
+  width:6px;height:6px;border-radius:50%;background:var(--muted);display:block;
+  animation:chipDot 1.1s ease-in-out infinite;
+}
+.chipdots i:nth-child(2){animation-delay:.16s}
+.chipdots i:nth-child(3){animation-delay:.32s}
+@keyframes chipDot{0%,100%{opacity:.25;transform:translateY(0)}45%{opacity:1;transform:translateY(-3px)}}
+
+/* --------------------------------------------------------------- the q chips */
+.chipsuggest{display:flex;flex-wrap:wrap;gap:7px;align-self:flex-start;max-width:100%}
+.chipsuggest__label{
+  width:100%;font-size:10.5px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;
+  color:var(--muted);margin-bottom:-1px;
+}
+.chipq{
+  font:inherit;font-size:12px;font-weight:650;cursor:pointer;
+  background:var(--surface);color:var(--accent);border:1px solid var(--line-hover);
+  border-radius:999px;padding:6px 12px;transition:all .15s ease;text-align:left;
+}
+.chipq:hover{background:var(--accent-fill);color:var(--on-accent);border-color:var(--accent-fill)}
+.chipq--go{
+  background:var(--accent-fill);color:var(--on-accent);border-color:var(--accent-fill);
+}
+.chipq--go:hover{background:var(--accent-fill-hover)}
+/* a chip that DOES something rather than explaining something */
+.chipq--act{border-color:var(--teal);color:var(--teal-text);background:var(--teal-bg)}
+.chipq--act:hover{background:var(--teal);color:#fff;border-color:var(--teal)}
+.chipq--on{background:var(--accent-fill);color:var(--on-accent);border-color:var(--accent-fill)}
+.chipsuggest.is-used .chipq{opacity:.45;cursor:default}
+.chipsuggest.is-used .chipq:hover{background:var(--surface);color:var(--accent);
+  border-color:var(--line-hover)}
+
+/* --------------------------------------------------------- data tables */
+.chiptable{width:100%;border-collapse:collapse;margin:9px 0 4px;font-size:11.6px}
+.chiptable th{
+  text-align:left;font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;
+  color:var(--muted);padding:0 7px 4px 0;border-bottom:1px solid var(--line);
+}
+.chiptable td{
+  padding:4px 7px 4px 0;border-bottom:1px solid var(--line-soft);color:var(--text-soft);
+  vertical-align:top;
+}
+.chiptable tr:last-child td{border-bottom:0}
+.chiptable code{font-size:10.8px;padding:0 3px}
+.chipok{color:var(--ok)}
+.chipbad{color:var(--bad)}
+
+/* ------------------------------------------------------------------ the input */
+/* one rounded field holding the mark, the input and a round send button */
+.chipask{
+  display:flex;align-items:center;gap:9px;padding:6px 6px 6px 12px;
+  background:var(--surface-2);border:1px solid var(--line-hover);border-radius:14px;
+  transition:border-color .15s ease,box-shadow .15s ease;
+}
+.chipask:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-ring)}
+.chipask__icon{display:flex;color:var(--muted);flex:0 0 auto}
+/* The console styles every <input> with its own border and a focus ring. Inside this pill that
+   drew a second box around the text, so all of it is cleared here - the pill is the field. */
+.chipask input,.chipask input:hover,.chipask input:focus{
+  flex:1 1 auto;min-width:0;width:auto;font:inherit;font-size:12.8px;
+  background:none;color:var(--text);border:0;border-radius:0;padding:8px 0;
+  box-shadow:none;outline:none;
+}
+.chipask input::placeholder{color:var(--muted)}
+.chipask__send{
+  flex:0 0 auto;width:34px;height:34px;border-radius:50%;border:0;cursor:pointer;
+  background:var(--accent-fill);color:var(--on-accent);
+  display:flex;align-items:center;justify-content:center;
+  transition:background .15s ease,transform .15s ease;
+}
+.chipask__send:hover{background:var(--accent-fill-hover);transform:scale(1.06)}
+.chipfoot__row{
+  display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;
+}
+.chipfoot__hint{font-size:10.8px;color:var(--muted)}
+.chipfoot__reset{
+  background:none;border:0;padding:0;font:inherit;font-size:11px;font-weight:700;
+  color:var(--accent);cursor:pointer;text-decoration:underline;
+}
+
+@media (max-width:1100px){
+  .chipchat{right:14px;left:14px;width:auto;height:min(72vh,540px)}
+  .chipchat.is-big{right:14px;left:14px;width:auto;height:min(86vh,760px)}
+}

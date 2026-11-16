@@ -42,6 +42,64 @@ Two fields on Apply Card are pickers in the Form view, driven by `features.apply
 Any field in any step can be turned into a picker the same way: add `options.<dotted.path>` to that
 feature. Booleans render as a strict dropdown; everything else as a type-ahead with suggestions.
 
+### Project Name — filling ASP ID, Access Key and serviceIds from the portal
+
+Every module page has a **Project** field in the Target panel. It is a dropdown of the projects
+that **belong to the selected affiliate** - pick one and it loads itself, or press **Load from
+portal**. The tool signs in to `dev-qa.konapay.net:10444`, finds that project in *My Projects*
+and reads:
+
+| From | What | Goes to |
+|---|---|---|
+| Summary tab | `aspId` | the `X-KM-User-AspId` field |
+| Credentials tab → API Key Information | the **OASL** access key | the `X-KM-Access-Key` field |
+| the project's card services | every `cardServiceId` + name | the `serviceId` **dropdown** on Apply Card |
+
+`OASL` is the WebView/OpenAPI key — verified against both configured projects, where it matches
+the keys that were already working. `OMCS` on the same screen belongs to another service and is
+never used. If a project has no ACTIVE OASL key the tool falls back to the first ACTIVE key and
+says so in the note under the field.
+
+The project is remembered **per affiliate × version**, so Burger King V1 and V2 can point at
+different projects, and it survives a reload. **Save target to config** writes it into
+`cardSource.projectsByTarget` so colleagues get it too. Load nothing and everything behaves exactly
+as before, from `config.json`.
+
+#### One affiliate, its own projects, its own service IDs
+
+An ASP id and a card service id are both 15 digits opening with the same 6-digit ASP code:
+Burger King is ASP `000187000000000` and owns `000187…` services, iKuka is `000163000000000` and
+owns `000163…`. That code - not the project's name - is what ties a project to an affiliate, which
+matters because `P1-P2-Tim Hortons-V1` is a **Burger King** project.
+
+So the tool scopes three things to the affiliate selected in the Target panel:
+
+| | Behaviour |
+|---|---|
+| Project dropdown | Only that affiliate's projects. Burger King lists 17, iKuka lists 5; neither sees the other's. `↻` re-reads the list from the portal, and **Other project…** turns it back into a free-text box. |
+| Loading a project | Refused if it belongs to another ASP, with the message naming both: *'Revamped-P1 to P2-iKuka' belongs to ASP 000163000000000, but the selected affiliate is ASP 000187000000000.* |
+| `serviceId` | Only the loaded project's own services - and within that project, only services whose ASP code matches it (a stray one is dropped and reported in the note). With no project loaded, only the `config.json` samples that match this affiliate's ASP are offered; the others are not shown at all. |
+
+The project list needs one portal call per project to find its ASP (the list endpoint does not
+return it), so the first load of an affiliate takes a few seconds; it is then cached for 10
+minutes server-side and for the session in the browser.
+
+Once a project is loaded, `serviceId` becomes a **dropdown** of that project's card services.
+Each entry shows the bare id — `000187000010000` — and nothing else, so what you see is exactly
+what is sent; the service name is the option's tooltip. A value already in the body that the
+project does not offer is kept at the top of the list (tooltip: *not one of this project's card
+services*) rather than silently dropped, and a **Custom…** entry turns the field back into a text
+box for an id the portal has not listed. With no project loaded the field behaves as before: the
+config suggestions, free text.
+
+**Why this matters for Card Registration.** Apply Card can now issue against any service the
+project offers, and the physical card must come from that same service. The card fetch therefore
+prefers, in order: a serviceId you ask for explicitly, the serviceId of the **most recent
+successful Apply Card** for that target, then the config default. If no unused ACTIVE card exists
+for that service the fetch **stops with a message listing the services that do have cards free** —
+it will not quietly hand back a card from another service, because that registers the wrong
+product.
+
 ### Pulling card data from the QA portal (Card Registration)
 
 Card Registration needs a real plastic card, which lives in the portal at
@@ -210,19 +268,41 @@ setting and keeps following it while you change that; clicking the toggle pins y
 `localStorage` and it stops following. An inline script in `index.html` applies the theme before
 first paint, so there is no flash of the wrong theme on load.
 
-**Run All Modules** — one button that runs the whole chain against the selected target: User
-Registration first, then every later module fed with that user's `userId`, `bankCode`,
-`cardApplyNo` and so on. Each module still works on its own exactly as before; this is an extra
+**Run All Modules** — one button that runs the modules you tick against the selected target:
+User Registration first, then every later module fed with that user's `userId`, `bankCode`,
+`cardApplyNo` and so on. All six are ticked by default, so the button still means "the whole
+chain" until you say otherwise. Each module still works on its own exactly as before; this is an extra
 route through the same endpoints, not a second implementation, so the placeholder guard, the
 portal card fetch and the `003_027` retry all still apply.
 
 | Control | Meaning |
 |---|---|
 | **Target pills** | every affiliate × version — Burger King V1/V2, iKuka V1/V2 — pick one here |
-| **Run V1 and V2, one after the other** | runs the full chain twice for the selected affiliate |
-| **Apply a physical card (delivery)** | `isDeliveryRequired` for Apply Card; untick for a virtual card |
+| **Project** | optional: load a portal project to supply the ASP ID, access key and service IDs |
+| **Service ID** | which of that project's card services to apply on; blank = the config default |
+| **Modules** | one tick box per module - run four of the six, or just one. **Select all** / **Clear all** toggles them together, and the choice is remembered between sessions |
+| **Physical Card (delivery)** | `isDeliveryRequired` for Apply Card; untick for a virtual card. It is indented under Apply Card because it is a property of that module, not a module of its own |
+| **Run V1 and V2, one after the other** | runs the selection twice for the selected affiliate |
 | **Stop on first failure** | off = carry on and report everything that broke |
 | **Settle (s)** | pause after Bank Account Registration before the inquiry (default 8) |
+
+The **Project** field works exactly as on the module pages, but is bound to the run target, and
+each affiliate × version remembers its own. So "run V1 and V2" uses the right project, ASP ID and
+access key for each leg. A project also makes a target with no configured key runnable — the key
+comes from the portal — which is how iKuka becomes usable without editing `config.json`. Leave it
+empty and the run behaves exactly as before, on the config values.
+
+**What a partial selection means.** A run that includes User Registration starts a clean session
+for that target, exactly as before - a new user, and nothing carried over. A selection *without*
+it keeps the session, so ticking only Apply Card and Card Registration chains onto the last user
+created for that target. The note under the tick boxes spells out what the current selection will
+use before you run it (the `userId` it will reuse, a missing `cardApplyNo`, a virtual card with
+Card Registration still ticked), and the server's placeholder guard still refuses to send a
+request with an unresolved `{{...}}` in it.
+
+The **Service ID** dropdown lists that project's card services by bare id. The run applies cards on
+the one you pick and then fetches the physical card from the same service, so Apply Card and Card
+Registration cannot drift apart.
 
 The run has **its own target**, so you can fire a V2 run without disturbing the module page you
 were on. It mirrors whatever the module pages are set to until you click a pill here, after which
@@ -262,7 +342,7 @@ has no application still getting a row.
 
 | Column | Source |
 |---|---|
-| Registered · Affiliate · WV · User ID · Login ID | User Registration |
+| Registered · Affiliate · WV · Project Name · User ID · Login ID | User Registration |
 | Card Apply No · Mobile Card No | Apply Card |
 | Physical Card No | Card Registration |
 | **Card Type** | derived — see below |
@@ -294,10 +374,150 @@ delivery flag, the basic card number and the registration time, and **Download C
 row with those extra fields included. Turning off *Save history* on a send keeps that call out of
 the ledger.
 
-**History** — every call written to `history\` with full request + response; click a row to read it.
+**History** — every call written to `history\` with full request + response, including the Project Name it ran under; click a row to read it. Calls made before project support existed show a dash there.
 
 **Settings** — edit `config.json` in the browser, save (invalid JSON is rejected, nothing written)
 or reload from disk. No restart needed.
+
+### How It Works - the animated explainer
+
+Under **FLOW** in the sidebar: the six modules left to right, each lighting up in turn while a
+packet carries the captured value (`userId`, `bankCode`, `cardApplyNo`) across to the next one.
+Dashed lines come down from the **KONA PLATE User Portal** into Apply Card and Card Registration,
+and the **Session** bar below fills with chips as the values are captured - each chip under the
+step that produced it.
+
+**Nothing moves until you press Play.** Opening the page draws the diagram and waits - no step is
+highlighted, no timer is running. It then plays through **once** and stops on the finished
+picture. One button does all of it: *Pause* while it runs, *Play* to carry on from a pause,
+*Play again* once it has finished. Nothing starts or restarts on its own. Clicking any step pins it and explains what it needs, what it captures and
+which endpoint it calls.
+
+**Download MP4** records the chain as a video file. A browser cannot film part of a page, so
+`web/flowvideo.js` draws the same diagram onto a canvas from the same data (shared through
+`window.KonaFlow.data`, one source of truth for both renderers) and captures it with
+`MediaRecorder` - 1704x816, 30fps, about 25 seconds. The clip carries the step panel too, so the
+video explains each step rather than just animating it. H.264 recording needs Chrome or Edge 126 or
+later; when the browser cannot encode it, nothing is downloaded silently in another container -
+the panel says so and offers WebM as an explicit choice. The clip is captured in real time, so the
+tab has to stay in front while it records.
+
+The animation only runs while the page is on screen - `showPage()` stops it on the way out, so no
+timer ticks behind the other pages. It also respects `prefers-reduced-motion`.
+
+The written version, for someone who has never opened the tool, is **`docs/HOW-IT-WORKS.md`**.
+
+### KonaRelay, the built-in agent
+
+**The mascot** is the product, standing up: a rounded card body in the console's purple, a dark
+visor with two lit eyes, the gold EMV chip on its chest, a magnetic stripe, two arms and two legs
+with lit soles, and an antenna on top. It floats, its shadow breathes with it, it blinks, and it
+waves when you point at it. While it is working the antenna pulses fast and the eyes narrow into
+a scan, so you can see it thinking without opening the panel. The round avatar in the header and
+beside every reply is the same character's head.
+
+**Pick it up and put it anywhere.** Dragging moves it freely in both directions, not just up and
+down one edge; the spot is remembered, and the panel opens from wherever it is standing (both
+read the same `--chip-right` / `--chip-bottom` on `<html>`, so there is one source of truth).
+
+Its panel opens above it: round avatar, name, live status dot, an expand control that doubles the
+panel, and a close. The composer is one rounded field - a mark on the left, the text box, a round
+send button. It pings until it has been opened once, and again whenever a Run All finishes.
+
+**KonaRelay** is named for what the console does: hand the value from each call to the next one. It is an *agent* over this tool's own knowledge and controls - not a language model.
+Every answer is written in `web/assistant.js`, and the ones about your own data are read live
+from the console through `window.KonaConsole` (a read-only bridge exposed by `app.js`). A QA tool
+should not improvise an answer about an access key or an error code, so when nothing matches he
+says so and offers the closest topics instead of guessing.
+
+**What he can do**, as opposed to explain - seven actions, each one declaring the facts it
+needs:
+
+| Action | Asks for | Does |
+|---|---|---|
+| Run a flow | affiliate, version, project, modules, card type | drives the Run All page and reports the result |
+| How many cards are free | affiliate, version, project | per-service counts from the portal: total, ACTIVE, free |
+| List the projects | affiliate | that affiliate's portal projects |
+| List a project's service IDs | affiliate, version, project | loads it and lists the services with names |
+| List the users I created | - | the latest users with their card status |
+| Give me the counts | - | users, applied, physical, virtual, broken down per target |
+| List my recent runs | - | the last calls with module, target and HTTP status |
+
+**Plain instructions work.** KonaRelay reads the module out of how people actually say it, not just
+from its exact label:
+
+| You type | It runs |
+|---|---|
+| *Register a user for Revamped-P1-P2-BK on Burger King V2* | User Registration, that project, BK V2 |
+| *Apply a card for iKuka V1 with a virtual card* | Apply Card, `isDeliveryRequired: false` |
+| *Register the bank account on Burger King V1* | Bank Account Registration |
+| *Without CI- Auto Recharge for Burger King V2* | that variant, not the two separate modules |
+| *Run the whole chain for all affiliates on both versions* | four runs: BK V1, BK V2, iKuka V1, iKuka V2 |
+
+Anything already in the sentence is pulled out and not asked for again; the affiliate and version
+default to the page you are on, and only the gaps are asked for. **All affiliates** and **both
+versions** expand into a matrix of runs, executed one after the other with a per-target result
+table at the end. A project belongs to one affiliate, so when several affiliates are named each
+one uses whatever it already has loaded rather than being forced onto a project that is not its
+own.
+
+Naming a module is only an instruction when the sentence is not asking about one: *"why is bank
+inquiry empty"* still gets the explanation, *"how do I run the flow"* still gets the how-to. The
+one action that changes anything - running - always shows a confirmation naming exactly what will
+happen before it sends.
+
+It executes through `window.KonaConsole.runFlow()`, which sets the Run All controls and calls the
+same `runAll()` the button calls, on the page where you can watch the steps. There is no second
+execution path, so the placeholder guard, the portal card fetch and the `003_027` retry all still
+apply.
+
+**"How many ACTIVE cards are left?"** is answered by `/api/card-stock`, which counts per service:
+total, ACTIVE, and **free** - ACTIVE minus every card this tool has already sent. Those are
+different numbers, because the portal keeps showing a spent card as ACTIVE, and the free count is
+the one that decides whether the next Card Registration can run.
+
+**It behaves like a chat widget.** It speaks first - five seconds in, a small bubble pops out
+beside the mark offering what it can do, dismissible and shown only once ever. Every reply carries
+the mark beside it, so an answer reads as coming from someone, and the panel header shows a live
+status dot. The mark itself stays where you put it: in its reader slot on the right edge, draggable.
+
+**It shows its reasoning.** Every answer carries a collapsible **Thinking** block, in the shape
+Claude and ChatGPT use: it fills while the work happens and folds away with the time it took and
+the number of steps. What it shows is what actually happened - the intent it matched and its
+score, the details pulled out of your sentence, which slots were still missing, every endpoint it
+called, and the figure it ended on. It is a log, not a performance: nothing is written there that
+did not happen.
+
+**How the conversation moves:** each topic carries a `next` list - the questions that usually
+follow it - which is what fills the **You might ask next** chips. Ask about Apply Card and he
+offers the physical-vs-virtual difference and where the cards come from; ask about `003_027` and
+he offers the "no unused ACTIVE card" case next. Free text is matched against each topic's words
+and tags.
+
+He covers 31 topics: the six modules and how they chain, Run All and partial selections, Project
+Name / ASP / access keys / affiliate-scoped service IDs, the portal card source, the error codes
+(`000_000`, `003_027`, `000_015`, `30_999_028`), Records and History, where to change a request
+body, and three live ones - what is loaded right now, what happened in the last run, and how many
+users and cards exist so far.
+
+**Wiring a real model in** is one server route: post the question plus a short context block to
+the Claude API and render the reply in the same bubble. The chips and the live-data answers stay
+useful either way, so that is an addition rather than a rewrite.
+
+### Long values are shortened on screen, never in the request
+
+A captured identifier like `CA20261116135151600472` is shown with its middle removed -
+`CA2026111...600472` - wherever it appears beside a label, in the Session chips, in the Run All
+summary, in the Records table and in KonaRelay's replies. Both ends are kept, because that is what
+people check, and the full value is always on the element's tooltip.
+
+One rule, `shorten()` in `app.js`, shared with the assistant through the bridge so the two cannot
+drift. It is **display only**: the request body, the raw JSON box, the response panel and the CSV
+export all carry the full value, and the Records filter still searches the full text, so a search
+for a complete `cardApplyNo` matches a row that shows it truncated.
+
+Only opaque identifiers are cut. A project name, a login or a date is meant to be read, so it is
+left whole however long it is.
 
 ## How a request is built
 
@@ -340,7 +560,7 @@ iKuka V2 only — deep-merged, so list just what differs:
       "IKUKA": {
         "V2": {
           "joinChannel": "IKUKA_APP",
-          "tcIdList": ["700001", "700002"],
+          "tcIdList": ["668151"],
           "addressInfo": { "addressDetail": "9층" }
         }
       }
@@ -412,11 +632,126 @@ the **same path and AspId** — only the access key differs:
 |---|---|---|---|
 | Burger King V1 | `/web-view/api/v1/user/registration` | `000187000000000` | `6167e69-bb878da6…` |
 | Burger King V2 | `/web-view/api/v1/user/registration` | `000187000000000` | `6167e69-a0f12213…` |
-| iKuka V1 | — | **needed** | **needed** |
-| iKuka V2 | — | **needed** | **needed** |
+| iKuka V1 | — | `000163000000000` | from the portal project |
+| iKuka V2 | — | `000163000000000` | from the portal project |
 
-Still needed: the iKuka credentials, the cURLs for steps 2–4, and any affiliate-specific
-`tcIdList` / `joinChannel` values.
+iKuka's ASP ID is now in `config.json` (read from its own projects' Summary tab), and its access
+key comes from whichever iKuka project you load - so iKuka runs without anything further being
+pasted in. Still useful: the iKuka cURLs for steps 2–4, in case its bodies differ from Burger
+King's.
+
+### What a module counts AS - `role`
+
+Records and the session seed used to key on the literal feature name `user_registration`, so a
+user created by **Without CI**, **Without CI- Auto Recharge**, **Auto Recharge** or **Auto
+Recharge- Change Account** was registered on the real system and then **never appeared in
+Records** - 52 users in history, 46 in the table.
+
+A feature now has a **role**: `role` from config if it sets one, otherwise its `parent`,
+otherwise its own key. A variant counts as the module it sits under, and the two Auto Recharge
+modules carry an explicit `"role": "user_registration"` because the cURL they were built from
+calls `/user/registration` (change that field when their real endpoint is wired in).
+
+The role is used by:
+
+| | |
+|---|---|
+| `build_records()` | which responses create a user row, apply a card, or register one |
+| `latest_session()` | which record anchors a target's session |
+| the Run All loop | a variant still gets `isDeliveryRequired`, the settle pause and the empty-inquiry retry |
+| Run All's session reset | a run counts as creating a user if any ticked module has that role |
+
+Verified after the fix: Records shows every user across all four targets, and a fresh **Without
+CI** run on Burger King V1 landed in Records, in History with its project name, and in that
+target's session seed.
+
+### Tooltips on a module
+
+A feature can carry a `tooltip` in `config.json` - a list of lines shown on hover wherever that
+module is offered: its variant pill, and its Run All tick box. Anything carrying one is marked
+with a small (i), so the hover is discoverable rather than hidden.
+
+**Auto Recharge** has one, holding the ARS test account that request expects - bank code, bank
+name, date of birth, account number, account holder, and the note that the mobile number has to
+be one that can receive ARS calls.
+
+### Variants - several cURLs behind one module page
+
+A feature with `"parent": "<key>"` is a **variant**: it does not get a sidebar entry, it appears
+as a pill in the **Request** row on its parent's page. Switching pills loads that variant's own
+endpoint, body and overrides. Nothing is shared or merged, and every field stays editable on the
+form and in the Raw JSON box.
+
+| Page | Pills |
+|---|---|
+| User Registration | User Registration · **Without CI** · **Without CI- Auto Recharge** |
+| Bank Account Registration | Bank Account Registration · **Auto Recharge** · **Auto Recharge- Change Account** |
+
+**The Without CI pair carries no `ci` field**, which needed one more thing: `randomize` lists only
+`loginId` and `email` for them, because `set_by_path` *creates* a missing key - listing `ci` there
+would have put a `ci` back into a body that deliberately has none.
+
+They also use `dispostable.com` addresses rather than the usual `yahoo.com`, so a feature can now
+carry its own **`randomFields`**, deep-merged over the global ones. Same mechanism, no leaking:
+User Registration still randomises `ci` and still gets `yahoo.com`.
+
+Their `tcIdList` types are kept exactly as pasted - strings in one, numbers in the other.
+
+Both verified live on Burger King V2 (the key in their cURLs): HTTP 200, `000_000 Success`,
+no `ci` in the sent body, `userId 50001169723` and `50001169724`.
+
+### The two Auto Recharge modules
+
+**Auto Recharge** and **Auto Recharge- Change Account** live **on the Bank Account Registration
+page**, not in the sidebar. A `"parent": "bank_account_registration"` entry turns a feature into a
+variant: the sidebar lists the parent only, and the page grows a **Request** switcher with one
+pill per variant. Any feature can declare a parent the same way.
+
+They stay three completely separate requests - separate `body`, separate endpoint, separate
+per-affiliate overrides, separate history entries. Switching pills loads that variant's own
+request; nothing is merged or carried across:
+
+| Pill | Endpoint | Body |
+|---|---|---|
+| Bank Account Registration | `/bankaccounts/ars/register` | 9 fields, the ARS body |
+| Auto Recharge | `/user/registration` | 12 fields, `loginId w1alnrc1m@...` |
+| Auto Recharge- Change Account | `/user/registration` | 12 fields, `loginId w1alntuc1m@...`, `birthDate 19820716` |
+
+Two things to know about both new ones:
+
+- **It is not part of the chain.** It carries `"runAllDefault": false`, so it is unticked in Run
+  All unless you tick it - the six-step chain runs exactly as it always has. Any feature can opt
+  out the same way.
+- **Both cURLs are the User Registration one.** Their path is
+  `/web-view/api/v1/user/registration` and their bodies are user bodies, so as they stand the
+  modules register a user. Give each the real auto-recharge endpoint and body and it becomes the
+  module its name describes - only its `endpoints.<key>` entry and the feature's `body` need to
+  change.
+
+**The Change Account cURL carries a different access key**, `6167e69-15cc...07e1e`, which is
+neither of the two in `config.json`. It belongs to the portal project **`Revamped-P3-P4-BK`**
+(Burger King ASP, ACTIVE OASL key) - found by walking the account's projects and reading each
+Credentials tab. Load that project in the **Project** field and the ASP ID and key come from it,
+which is exactly what that field is for; no per-module key override is needed.
+
+Both are wired like every other module: per-affiliate `tcIdList` (Burger King `664156, 664160`,
+iKuka `668151`), `ci` / `loginId` / `email` randomised on every send, their own sidebar icons, and
+history and Records entries. Both verified live on Burger King V1 - HTTP 200, `000_000 Success`,
+`userId 50001169704` and `50001169706` captured.
+
+### Test case IDs (`tcIdList`)
+
+User Registration reports its run against the affiliate's QA test cases, so the list is
+per-affiliate and set as an override, not shared:
+
+| Affiliate | `tcIdList` | Where |
+|---|---|---|
+| Burger King | `["664156", "664160"]` | `features.user_registration.overrides.BURGER_KING.V1` and `.V2` |
+| iKuka | `["668151"]` | `features.user_registration.overrides.IKUKA.V1` and `.V2` |
+
+All four slots are set explicitly, so no affiliate inherits another's IDs from the shared default
+body. `tcIdList` appears only in the User Registration payload - the other five modules' APIs do not
+take it.
 
 ## Layout
 
@@ -424,6 +759,11 @@ Still needed: the iKuka credentials, the cURLs for steps 2–4, and any affiliat
 server.py              local web server + JSON API (send proxy, randomize, config, history)
 .vscode/settings.json  Live Server config (root = web/, port 5500, ignores history & *.py)
 web/index.html         the console
+web/flowchart.js       the How It Works diagrams: SVG builders plus the stage director
+web/flowchart.css      diagram styling, all of it theme tokens so dark mode needs no second set
+web/flowvideo.js       the canvas twin of the chain diagram, recorded to MP4 by MediaRecorder
+web/assistant.js       KonaRelay, the built-in agent: topics, actions, reasoning trace, the mark
+web/assistant.css      KonaRelay's styling - the reader slot, the mark's animations, the chat sheet
 web/styles.css         light + dark themes, both pure token swaps on [data-theme].
                        --accent is purple for TEXT, --accent-fill is purple as a BACKGROUND,
                        --on-accent is what sits on it; they diverge in dark mode because a

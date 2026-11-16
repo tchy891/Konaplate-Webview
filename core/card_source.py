@@ -21,6 +21,7 @@ Note the project list filter is CASE SENSITIVE on the e-mail: "kona2@..." works,
 """
 
 import base64
+import concurrent.futures
 import gzip
 import json
 import ssl
@@ -32,6 +33,19 @@ import urllib.request
 CARD_LIST_PATH = "/api/test-data/card/list"
 CARD_LIST_METHOD = "POST"
 CARD_LIST_PAGE_SIZE = 300
+
+# An ASP id and a card service id are both 15 digits that open with the same 6-digit ASP code:
+# ASP 000187000000000 (Burger King) owns 000187000010000, ASP 000163000000000 (iKuka) owns
+# 000163000042000. That shared prefix is how a service, and a whole project, is tied to one
+# affiliate - the project list the portal returns carries no aspId of its own.
+ASP_CODE_LEN = 6
+PROJECT_CACHE_SECONDS = 600
+
+
+def asp_code(value):
+    """The 6-digit affiliate code inside an ASP id or a service id; '' when it is not one."""
+    text = str(value or "").strip()
+    return text[:ASP_CODE_LEN] if len(text) >= ASP_CODE_LEN and text.isdigit() else ""
 
 
 class PortalError(Exception):
@@ -45,6 +59,8 @@ class CardSource:
         self._token = None
         self._user_id = None
         self._expires_at = 0
+        self._asp_by_project = {}        # projectId -> aspId, so we classify each project once
+        self._project_cache = None       # (fetched_at, [rows]) for the affiliate project picker
 
     # ----------------------------------------------------------------- http
     def _context(self):
@@ -149,6 +165,54 @@ class CardSource:
                 return project.get("projectId") or project.get("id")
         raise PortalError("project {0!r} not found for this portal account".format(wanted))
 
+    def project_asp(self, project_id):
+        """The ASP (affiliate) a project belongs to. Only the details call carries it."""
+        if project_id in self._asp_by_project:
+            return self._asp_by_project[project_id]
+        try:
+            value = (self.project_summary(project_id) or {}).get("aspId") or ""
+        except PortalError:
+            value = ""
+        self._asp_by_project[project_id] = value
+        return value
+
+    def projects_with_asp(self, refresh=False):
+        """Every project on the account, each tagged with its ASP id.
+
+        The project list endpoint does not return aspId, so each project needs its own details
+        call. They run in a small thread pool and are cached, because this is what fills the
+        affiliate's project picker on every target switch.
+        """
+        if not refresh and self._project_cache:
+            fetched_at, rows = self._project_cache
+            if time.time() - fetched_at < PROJECT_CACHE_SECONDS:
+                return rows
+        if refresh:
+            self._asp_by_project = {}
+        raw = self.projects()
+        rows = [{"projectId": item.get("projectId") or item.get("id"),
+                 "name": (item.get("name") or "").strip(),
+                 "projectStatus": item.get("projectStatus"),
+                 "aspId": ""} for item in raw]
+        with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:
+            for row, asp in zip(rows, pool.map(lambda r: self.project_asp(r["projectId"]), rows)):
+                row["aspId"] = asp
+        rows.sort(key=lambda row: row["name"].lower())
+        self._project_cache = (time.time(), rows)
+        return rows
+
+    def projects_for_asp(self, asp_id, refresh=False):
+        """(projects of that affiliate, whether filtering was possible).
+
+        With no usable ASP id - an affiliate still set to CHANGE_ME in config.json - every
+        project comes back rather than none, and the caller is told it is unfiltered.
+        """
+        rows = self.projects_with_asp(refresh=refresh)
+        code = asp_code(asp_id)
+        if not code:
+            return rows, False
+        return [row for row in rows if asp_code(row["aspId"]) == code], True
+
     def services(self, project_id):
         status, _, body = self._call("/api/card-service/project/{0}".format(project_id))
         if status != 200:
@@ -159,6 +223,10 @@ class CardSource:
         return sorted({item.get("cardServiceId") for item in data if item.get("cardServiceId")})
 
     def cards(self, project_id, services):
+        return self.cards_page(project_id, services)[0]
+
+    def cards_page(self, project_id, services):
+        """(rows, pageInfo). pageInfo tells us whether one page held everything."""
         # the portal sends [{"serviceId": "..."}] - plain strings are rejected with a bare 422
         payload = {"projectId": project_id,
                    "serviceList": [{"serviceId": str(s).strip()} for s in services],
@@ -168,15 +236,110 @@ class CardSource:
             raise PortalError(
                 "card list failed ({0}) for project {1}: {2}".format(status, project_id, body[:220]))
         data = self._json(body, "card list")
+        page = data.get("pageInfo") if isinstance(data, dict) else None
         for key in ("cardInfo", "value", "list", "content", "data"):
             found = data.get(key) if isinstance(data, dict) else None
             if isinstance(found, list):
-                return found
+                return found, page
             if isinstance(found, dict):
                 for inner in ("cardInfo", "value", "list"):
                     if isinstance(found.get(inner), list):
-                        return found[inner]
-        return data if isinstance(data, list) else []
+                        return found[inner], page
+        return (data if isinstance(data, list) else []), page
+
+    # ------------------------------------------------------------- project
+    def project_summary(self, project_id):
+        """The project's Summary tab: name, status and the ASP ID the APIs are called with."""
+        status, _, body = self._call("/api/project/{0}/details".format(project_id))
+        if status != 200:
+            raise PortalError("project details failed ({0}): {1}".format(status, body[:200]))
+        return self._json(body, "project details")
+
+    def project_keys(self, project_id):
+        """The Credentials tab: [{keyType, accessKey, secretKey, keyStatus}].
+
+        keyType OASL is the WebView/OpenAPI key - verified against both configured projects.
+        OMCS is a different service and must not be used for these calls.
+        """
+        status, _, body = self._call("/api/project/keys/{0}".format(project_id))
+        if status != 200:
+            raise PortalError("project keys failed ({0}): {1}".format(status, body[:200]))
+        data = self._json(body, "project keys")
+        return data.get("accessKeyInfoRes") or []
+
+    def card_services(self, project_id):
+        """Card services with their names, for the Apply Card picker."""
+        status, _, body = self._call("/api/card-service/project/{0}".format(project_id))
+        if status != 200:
+            raise PortalError("card services failed ({0}): {1}".format(status, body[:200]))
+        data = self._json(body, "card services")
+        if isinstance(data, dict):
+            data = data.get("data") or []
+        out, seen = [], set()
+        for item in data:
+            service_id = (item.get("cardServiceId") or "").strip()
+            if not service_id or service_id in seen:
+                continue
+            seen.add(service_id)
+            out.append({
+                "serviceId": service_id,
+                "name": item.get("name") or "",
+                "status": item.get("status"),
+                "productType": item.get("productType"),
+            })
+        return out
+
+    def lookup_project(self, name, expected_asp=None):
+        """Everything the UI needs for one project, in one portal round trip set.
+
+        `expected_asp` is the ASP id of the affiliate selected in the UI. A project belongs to
+        exactly one affiliate, so loading one from a different ASP would hand Burger King a set
+        of iKuka service ids - that is refused outright rather than filtered quietly.
+        """
+        project_id = self.project_id(name)
+        summary = self.project_summary(project_id)
+        project_asp = summary.get("aspId") or ""
+        wanted_code, found_code = asp_code(expected_asp), asp_code(project_asp)
+        if wanted_code and found_code and wanted_code != found_code:
+            raise PortalError(
+                "{0!r} belongs to ASP {1}, but the selected affiliate is ASP {2}. Pick one of "
+                "this affiliate's own projects, or switch the affiliate first.".format(
+                    name, project_asp, expected_asp))
+        keys = self.project_keys(project_id)
+        services = self.card_services(project_id)
+
+        wanted = (self.config.get("accessKeyType") or "OASL").upper()
+        active = [k for k in keys if str(k.get("keyStatus", "")).upper() == "ACTIVE"]
+        chosen = next((k for k in active if str(k.get("keyType", "")).upper() == wanted), None)
+
+        warnings = []
+        if chosen is None and active:
+            chosen = active[0]
+            warnings.append("No ACTIVE {0} key on this project - using the {1} key instead; check "
+                            "it is the right one.".format(wanted, chosen.get("keyType")))
+        if chosen is None:
+            warnings.append("This project has no ACTIVE access key.")
+        # a service id carries its owner's ASP code, so anything that is not this project's
+        # affiliate is dropped before it can reach the serviceId picker
+        foreign = [s for s in services if found_code and asp_code(s["serviceId"]) != found_code]
+        if foreign:
+            services = [s for s in services if s not in foreign]
+            warnings.append("Hid {0} card service(s) that belong to another ASP: {1}.".format(
+                len(foreign), ", ".join(s["serviceId"] for s in foreign)))
+        if not services:
+            warnings.append("This project exposes no card services.")
+
+        return {
+            "projectId": project_id,
+            "projectName": summary.get("name") or name,
+            "projectStatus": summary.get("projectStatus"),
+            "aspId": project_asp,
+            "accessKey": (chosen or {}).get("accessKey", ""),
+            "keyType": (chosen or {}).get("keyType", ""),
+            "availableKeys": [{"keyType": k.get("keyType"), "keyStatus": k.get("keyStatus")} for k in keys],
+            "services": services,
+            "warnings": warnings,
+        }
 
     # ----------------------------------------------------------------- pick
     def pick_card(self, project_name, exclude=(), prefer_service=None):
@@ -217,6 +380,18 @@ class CardSource:
                     " ({0} skipped as already used here)".format(skipped) if skipped else ""))
 
         matched = [row for row in active if str(row.get("serviceId", "")).strip() == str(prefer_service or "").strip()]
+        if prefer_service and not matched:
+            # handing back a card from another service would register the wrong product,
+            # so say what is actually available instead of quietly substituting
+            per_service = {}
+            for row in active:
+                key = str(row.get("serviceId", "") or "?")
+                per_service[key] = per_service.get(key, 0) + 1
+            raise PortalError(
+                "no unused {0} card for service {1} in {2!r}. Services with cards free right now: "
+                "{3}".format(wanted, prefer_service, project_name,
+                             ", ".join("{0} ({1})".format(k, v) for k, v in sorted(per_service.items()))
+                             or "none"))
         card = (matched or active)[0]
         fields = {field: str(card.get(source, "") or "") for field, source in mapping.items()}
         return {

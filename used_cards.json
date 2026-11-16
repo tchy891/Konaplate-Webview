@@ -1,4 +1,5 @@
 {
+  "_README": "Physical cards this tool has sent to Card Registration and must never offer again. The portal keeps listing a consumed card as ACTIVE for a while, and cards mapped by other testing never show it at all, so this file is the reliable record. 003_027 = already mapped to a user, 000_000 = registered by us. Delete an entry only if you know the card is genuinely free.",
   "cards": {
     "1110110900830052": {
       "code": "003_027",
@@ -23,6 +24,38 @@
     "1110110900830193": {
       "code": "000_000",
       "at": "2026-11-10T12:46:51"
+    },
+    "1110110902360017": {
+      "code": "003_027",
+      "at": "2026-11-13T12:27:52"
+    },
+    "1110110902360090": {
+      "code": "000_000",
+      "at": "2026-11-13T10:52:44"
+    },
+    "1110110900830243": {
+      "code": "003_027",
+      "at": "2026-11-13T11:42:21"
+    },
+    "1110110900830268": {
+      "code": "003_027",
+      "at": "2026-11-13T11:42:24"
+    },
+    "1110110900830284": {
+      "code": "000_000",
+      "at": "2026-11-13T11:42:28"
+    },
+    "9440449800000018": {
+      "code": "003_027",
+      "at": "2026-11-13T11:42:58"
+    },
+    "9440449800000026": {
+      "code": "000_000",
+      "at": "2026-11-13T11:43:02"
+    },
+    "1110110900830292": {
+      "code": "000_000",
+      "at": "2026-11-13T12:27:56"
     }
   }
 }
