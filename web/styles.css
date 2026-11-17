@@ -9,71 +9,81 @@
    purple light enough to read on a dark card is too light to carry white text.                */
 :root{
   color-scheme:light;
-  --bg:#FAF8FD;
+  /* The default palette is installonair's: brand blue #149FFF with a #39BFD3 cyan second,
+     on their near-white ground (#FBFBFB / #C8DADF). Two deliberate departures, both for
+     readability: text and button fills use a deeper shade of the same blue, because white on
+     #149FFF is 2.8:1 - the brand colour is kept for glows, rings, focus and the dark theme,
+     where it carries dark text and reads at 7:1. */
+  --bg:#FBFBFC;
   --surface:#FFFFFF;
-  --surface-2:#F4EFFB;
-  --surface-3:#EDE6F7;
-  --line:#E6DFF2;
-  --line-soft:#F0EBF8;
-  --line-hover:#D5C9EC;
-  --accent:#6D28D9;
-  --accent-fill:#6D28D9;
-  --accent-fill-hover:#5B21B6;
+  --surface-2:#F1F7FB;
+  --surface-3:#E4EFF7;
+  --line:#D7E4EA;
+  --line-soft:#EAF2F6;
+  --line-hover:#A9C6D2;
+  --accent:#0A6FB8;
+  --accent-fill:#0A6FB8;
+  --accent-fill-hover:#095C99;
   --on-accent:#FFFFFF;
-  --accent-ink:#4C1D95;
-  --accent-glow:rgba(109,40,217,.28);
-  --accent-ring:rgba(109,40,217,.15);
-  --teal:#0D9488;
-  --teal-text:#0B7A70;
-  --teal-bg:#DCF5F1;
-  --amber:#D97706;
-  --text:#221C33;
-  --text-soft:#463E5C;
-  --muted:#5F6676;
-  --dot-idle:#858CA0;
-  --ok:#166534;
-  --ok-bg:#E7F6EC;
-  --bad:#BE123C;
-  --bad-bg:#FDEAEE;
-  --bad-line:#F6C9D4;
-  --bad-ink:#7C1030;
-  --toast-bg:#2E1065;
-  --shadow:rgba(34,28,51,.04);
-  --shadow-strong:rgba(46,16,101,.35);
+  --accent-ink:#0B4C7A;
+  --accent-glow:rgba(20,159,255,.30);
+  --accent-ring:rgba(20,159,255,.20);
+  --brand:#149FFF;
+  --teal:#39BFD3;
+  --teal-text:#0F6C7C;
+  --teal-bg:#E2F6FA;
+  --amber:#B4690E;
+  --text:#0F3C4B;
+  --text-soft:#3C5F7A;
+  --muted:#55737F;
+  --dot-idle:#92B0B3;
+  --ok:#136B3F;
+  --ok-bg:#E3F6EC;
+  --bad:#C01F3C;
+  --bad-bg:#FDECEF;
+  --bad-line:#F6CBD3;
+  --bad-ink:#7C0F26;
+  --toast-bg:#0F3C4B;
+  --shadow:rgba(15,60,75,.05);
+  --shadow-strong:rgba(15,60,75,.28);
   --mono:Consolas,"Cascadia Mono","Courier New","Malgun Gothic",monospace;
+  --font:"Segoe UI","Malgun Gothic",system-ui,sans-serif;
+  --btn-radius:9px;
 }
-
 [data-theme="dark"]{
   color-scheme:dark;
-  --bg:#130C1F;
-  --surface:#1B1430;
-  --surface-2:#251B3D;
-  --surface-3:#30234C;
-  --line:#3A2D55;
-  --line-soft:#2A2042;
-  --line-hover:#53427A;
-  --accent:#C4A9FB;
-  --accent-fill:#7C3AED;
-  --accent-fill-hover:#8B50F5;
-  --on-accent:#FFFFFF;
-  --accent-ink:#DBCBFF;
-  --accent-glow:rgba(124,58,237,.45);
-  --accent-ring:rgba(196,169,251,.25);
-  --teal:#2DD4BF;
-  --teal-text:#5EE7D4;
-  --teal-bg:#10322F;
-  --amber:#F2A93B;
-  --text:#EFE9FA;
-  --text-soft:#CCC1E4;
-  --muted:#9E93B6;
-  --dot-idle:#6F6388;
+  /* The same two hues on a deep slate-navy. Here the brand blue is bright enough to carry
+     near-black text, so buttons use #149FFF itself. */
+  --bg:#0A1620;
+  --surface:#11232F;
+  --surface-2:#172E3D;
+  --surface-3:#1F3E51;
+  --line:#2A4B5F;
+  --line-soft:#19303F;
+  --line-hover:#3C6B85;
+  --accent:#6FC5FF;
+  --accent-fill:#149FFF;
+  --accent-fill-hover:#3FB2FF;
+  --on-accent:#04202F;
+  --accent-ink:#A8DCFF;
+  --accent-glow:rgba(20,159,255,.45);
+  --accent-ring:rgba(111,197,255,.28);
+  --brand:#149FFF;
+  --teal:#39BFD3;
+  --teal-text:#72DCEC;
+  --teal-bg:#0E3540;
+  --amber:#F0A742;
+  --text:#E8F3F9;
+  --text-soft:#C2D8E4;
+  --muted:#8FAEBD;
+  --dot-idle:#5E7D8C;
   --ok:#5FD98B;
-  --ok-bg:#16301F;
+  --ok-bg:#0F2F1F;
   --bad:#FF93AA;
-  --bad-bg:#371522;
-  --bad-line:#5A2435;
+  --bad-bg:#371A22;
+  --bad-line:#5A2A35;
   --bad-ink:#FFC2CF;
-  --toast-bg:#2A1F45;
+  --toast-bg:#0F2A38;
   --shadow:rgba(0,0,0,.35);
   --shadow-strong:rgba(0,0,0,.6);
 }
@@ -82,7 +92,7 @@
 html,body{height:100%}
 body{
   margin:0;background:var(--bg);color:var(--text);
-  font:14px/1.45 "Segoe UI","Malgun Gothic",system-ui,sans-serif;
+  font:14px/1.45 var(--font);
 }
 .is-hidden{display:none !important}
 .grow{flex:1}
@@ -207,8 +217,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 }
 
 .btn{
-  border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:9px 15px;
-  font:700 13px "Segoe UI",sans-serif;color:var(--text-soft);cursor:pointer;
+  border:1px solid var(--line);background:var(--surface);border-radius:var(--btn-radius);padding:9px 15px;
+  font:700 13px var(--font);color:var(--text-soft);cursor:pointer;
 }
 .btn:hover{background:var(--surface-2);border-color:var(--accent);color:var(--accent)}
 .btn:disabled{opacity:.55;cursor:default}
@@ -380,6 +390,16 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 }
 .toast.is-on{opacity:1;transform:none}
 
+/* On the sign-in page the toast is the whole answer, so it drops in at the top, centred,
+   where the eye already is - not in a corner behind the keyboard. */
+body.gate .toast{
+  right:auto;bottom:auto;top:18px;left:50%;
+  transform:translateX(-50%) translateY(-14px);
+  padding:13px 22px;font-size:13.5px;border-left:0;border-top:4px solid var(--ok);
+  max-width:min(440px,calc(100vw - 32px));text-align:center;
+}
+body.gate .toast.is-on{transform:translateX(-50%) translateY(0)}
+
 /* ----------------------------------------------------------- project row */
 .projectrow{display:flex;gap:9px;align-items:center;flex:1 1 auto;min-width:0}
 .projectrow input,.projectrow select{flex:1 1 auto;min-width:0}
@@ -388,3 +408,103 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 /* the refresh glyph sits next to Load from portal - keep it square, not word-width */
 #btnRefreshProjects{padding:0 11px;font-size:15px;line-height:1}
 .select--narrow{max-width:340px}
+
+
+/* ==========================================================================
+   The sign-in page. Deliberately plain: a mark, one line of what this is,
+   two fields. Everything else about the console is behind it.
+   ========================================================================== */
+body.gate{
+  min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px;
+  background:
+    radial-gradient(900px 420px at 15% -10%,var(--accent-ring),transparent 60%),
+    radial-gradient(700px 380px at 110% 110%,var(--teal-bg),transparent 55%),
+    var(--bg);
+}
+/* two columns: the pitch on the left, the door on the right */
+.gate__wrap{
+  display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:clamp(40px,8vw,140px);
+  align-items:center;width:min(1120px,100%);
+}
+.gate__pitch{max-width:540px}
+.gate__head{
+  margin:0 0 12px;font-size:clamp(25px,2.9vw,36px);line-height:1.14;font-weight:800;
+  letter-spacing:-.6px;color:var(--text);
+}
+/* the first line stays on one line - it is the name of the thing, not a sentence to wrap */
+.gate__head span{white-space:nowrap}
+.gate__head em{font-style:normal;color:var(--accent)}
+.gate__sub{margin:0 0 26px;font-size:14px;line-height:1.65;color:var(--text-soft);max-width:400px}
+
+.gate__card{
+  width:min(400px,100%);background:var(--surface);border:1px solid var(--line);
+  border-radius:18px;padding:26px 26px 20px;box-shadow:0 24px 60px var(--shadow-strong);
+}
+.gate__welcome{margin:0 0 4px;font-size:21px;font-weight:800;color:var(--text)}
+.gate__brand{display:flex;align-items:center;gap:11px;margin-bottom:22px}
+.gate__badge{
+  width:40px;height:40px;border-radius:12px;display:flex;align-items:center;
+  justify-content:center;background:linear-gradient(135deg,var(--accent-fill),var(--accent-fill-hover));
+  box-shadow:0 8px 18px var(--accent-glow);flex:0 0 auto;
+}
+.gate__brand b{display:block;font-size:15px;font-weight:800;letter-spacing:.6px;color:var(--text)}
+.gate__brand i{display:block;font-style:normal;font-size:11.5px;color:var(--muted);font-weight:600}
+.gate__line{margin:0 0 14px;font-size:12.8px;line-height:1.6;color:var(--text-soft)}
+
+/* three short lines about what is behind the door */
+.gate__points{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:15px}
+.gate__points li{
+  display:flex;align-items:center;gap:13px;font-size:13.5px;line-height:1.5;
+  font-weight:600;color:var(--text-soft);
+}
+.gate__points li b{color:var(--text);font-weight:800}
+.gate__points svg{
+  width:19px;height:19px;flex:0 0 auto;color:var(--accent);padding:8px;box-sizing:content-box;
+  background:var(--surface-2);border:1px solid var(--line);border-radius:11px;
+}
+
+@media (max-width:980px){
+  .gate__wrap{grid-template-columns:minmax(0,1fr);gap:28px;width:min(420px,100%)}
+  .gate__pitch{max-width:none}
+  .gate__head{font-size:26px}
+  .gate__sub{margin-bottom:18px}
+  .gate__points{gap:11px}
+}
+
+.gate__tabs{display:flex;gap:4px;background:var(--surface-2);border:1px solid var(--line);
+  border-radius:11px;padding:4px;margin-bottom:16px}
+.gate__tab{
+  flex:1 1 0;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;padding:7px 10px;
+  border:0;border-radius:8px;background:none;color:var(--muted);
+}
+.gate__tab.is-on{background:var(--surface);color:var(--accent);box-shadow:0 1px 3px var(--shadow)}
+
+.gate__form{display:flex;flex-direction:column;gap:12px}
+.gate__field{display:flex;flex-direction:column;gap:5px}
+.gate__field.is-hidden{display:none}
+.gate__field span{font-size:11.5px;font-weight:700;color:var(--text-soft)}
+.gate__go{width:100%;justify-content:center;margin-top:4px;padding:10px}
+.gate__note{margin:2px 0 0;font-size:11.8px;line-height:1.5;color:var(--muted);min-height:16px}
+.gate__note.is-bad{color:var(--bad)}
+
+/* who is signed in - top right, next to the theme switch */
+.who{
+  display:flex;align-items:center;gap:8px;margin-left:10px;padding:4px 5px 4px 5px;
+  background:var(--surface-2);border:1px solid var(--line);border-radius:999px;
+}
+.who__avatar{
+  width:26px;height:26px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;
+  justify-content:center;font-size:12px;font-weight:800;letter-spacing:.2px;
+  background:linear-gradient(135deg,var(--accent-fill),var(--accent-fill-hover));
+  color:var(--on-accent);
+}
+.who__name{
+  font-size:12px;font-weight:700;color:var(--text-soft);max-width:130px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.who__out{
+  background:none;border:0;padding:4px;cursor:pointer;color:var(--muted);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+}
+.who__out:hover{background:var(--bad-bg);color:var(--bad)}
+@media (max-width:900px){ .who__name{display:none} }

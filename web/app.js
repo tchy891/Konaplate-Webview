@@ -72,19 +72,54 @@ function persistSessions() {
 const API_PORTS = [8770, 8771, 8772, 8080];
 let API_BASE = "";
 
+/* ------------------------------------------------------------- the session */
+const TOKEN_KEY = "konaSession";
+const USER_KEY = "konaUser";
+
+function sessionToken() {
+  try { return localStorage.getItem(TOKEN_KEY) || ""; } catch (error) { return ""; }
+}
+
+function signedInUser() {
+  try { return JSON.parse(localStorage.getItem(USER_KEY) || "null"); } catch (error) { return null; }
+}
+
+/* The server answers 401 to every data endpoint without a live session. When that happens the
+   token is stale, so clear it and go back to the gate rather than showing an empty console. */
+function toGate(why) {
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+  } catch (error) { /* storage blocked */ }
+  const base = location.pathname.replace(/[^/]*$/, "");
+  location.href = base + "login.html" + (why ? "?why=" + encodeURIComponent(why) : "");
+}
+
 async function api(path, payload) {
-  const options = payload === undefined
-    ? { method: "GET" }
-    : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) };
+  const headers = { "X-Kona-Session": sessionToken() };
+  let options;
+  if (payload === undefined) {
+    options = { method: "GET", headers };
+  } else {
+    headers["Content-Type"] = "application/json";
+    options = { method: "POST", headers, body: JSON.stringify(payload) };
+  }
   const response = await fetch(API_BASE + path, options);
   const data = await response.json().catch(() => ({ error: "server returned non-JSON" }));
+  if (response.status === 401 || data.signedOut) {
+    toGate("expired");
+    throw new Error("Your session has ended - signing in again.");
+  }
   if (!response.ok) throw new Error(data.error || ("HTTP " + response.status));
   return data;
 }
 
 async function probeApi(base) {
   try {
-    const response = await fetch(base + "/api/bootstrap", { method: "GET" });
+    const response = await fetch(base + "/api/bootstrap", {
+      method: "GET", headers: { "X-Kona-Session": sessionToken() },
+    });
+    if (response.status === 401) return "signedout";
     return response.ok ? await response.json() : null;
   } catch (error) {
     return null;
@@ -103,6 +138,10 @@ async function discoverApi() {
 
   for (const base of [...new Set(candidates)]) {
     const boot = await probeApi(base);
+    if (boot === "signedout") {        /* the server is there, we are just not signed in */
+      API_BASE = base;
+      return "signedout";
+    }
     if (boot) {
       API_BASE = base;
       return boot;
@@ -850,9 +889,20 @@ async function loadHistory() {
    about it: the ASP ID, the OASL access key and the card services. Nothing here changes how
    a module behaves when no project is loaded - the config values stay in charge. */
 const PROJECT_STORE = "konaProjects";
+const PROJECT_OWNER = "konaProjectsFor";       /* the sign-in those loaded projects belong to */
 
+/* A loaded project survives a reload within one sign-in, but a NEW sign-in starts clean: every
+   Project box shows its placeholder until something is picked and loaded. Nothing else changes -
+   the project is still kept per affiliate x version, and with none loaded the ASP ID, access key
+   and serviceId come from config.json exactly as they always have. */
 function loadProjects() {
   try {
+    if (localStorage.getItem(PROJECT_OWNER) !== sessionToken()) {
+      state.projects = {};
+      localStorage.removeItem(PROJECT_STORE);
+      localStorage.setItem(PROJECT_OWNER, sessionToken());
+      return;
+    }
     state.projects = JSON.parse(localStorage.getItem(PROJECT_STORE) || "{}");
   } catch (error) {
     state.projects = {};
@@ -862,6 +912,7 @@ function loadProjects() {
 function persistProjects() {
   try {
     localStorage.setItem(PROJECT_STORE, JSON.stringify(state.projects || {}));
+    localStorage.setItem(PROJECT_OWNER, sessionToken());
   } catch (error) { /* storage blocked */ }
 }
 
@@ -1824,8 +1875,8 @@ window.KonaConsole = {
     return result;
   },
 
-  cardStock: function (target, version, projectName) {
-    return api("/api/card-stock", { target, version, projectName });
+  cardStock: function (target, version, projectName, detail) {
+    return api("/api/card-stock", { target, version, projectName, detail: !!detail });
   },
 
   /* Run the chain - the same machinery the Run All page uses, with its controls set first
@@ -2034,6 +2085,19 @@ function wire() {
     });
   }
 
+  /* who is signed in, and the way out */
+  const who = signedInUser();
+  if (who) {
+    $("#whoName").textContent = who.display || who.username;
+    $("#whoAvatar").textContent = (who.display || who.username).trim().charAt(0).toUpperCase();
+    $("#whoAvatar").title = who.username + (who.role === "owner" ? " (owner)" : "");
+    $("#whoBox").title = "Signed in as " + who.username;
+  }
+  $("#btnSignOut").onclick = async () => {
+    try { await api("/api/auth/logout", { token: sessionToken() }); } catch (error) { /* going anyway */ }
+    toGate();
+  };
+
   $("#btnLoadProject").onclick = loadProjectFromPortal;
   $("#projectName").onkeydown = (event) => {
     if (event.key === "Enter") loadProjectFromPortal();
@@ -2127,7 +2191,16 @@ function wire() {
 
 /* ------------------------------------------------------------- start */
 (async function start() {
+  /* no token, no console - the server would refuse anyway, this just saves the round trip */
+  if (!sessionToken()) {
+    toGate();
+    return;
+  }
   const boot = await discoverApi();
+  if (boot === "signedout") {
+    toGate("expired");
+    return;
+  }
   if (!boot) {
     showApiBanner();
     return;

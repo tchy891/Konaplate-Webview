@@ -24,6 +24,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, unquote
 
 from core.api_client import build_headers, parse_header_lines, send_request, to_curl
+from core.auth import Accounts, AuthError
 from core.card_source import CardSource, PortalError, asp_code
 from core.config_store import ConfigStore, deep_merge, find_values
 from core.randomizer import apply_random_fields
@@ -800,33 +801,46 @@ def api_card_stock(payload):
     wanted = (config.get("statusFilter") or "ACTIVE").upper()
     used = attempted_physical_cards()
 
+    want_cards = bool(payload.get("detail"))
+    limit = int(payload.get("limit") or 12)
+
+    def slot(service_id, service_name):
+        return {"serviceId": service_id, "name": service_name,
+                "total": 0, "active": 0, "free": 0, "usedHere": 0, "statuses": {},
+                "freeCards": [], "usedCards": [], "deadCards": []}
+
     by_service = {}
     for service in services:
-        by_service[service["serviceId"]] = {
-            "serviceId": service["serviceId"], "name": service.get("name") or "",
-            "total": 0, "active": 0, "free": 0, "usedHere": 0, "statuses": {},
-        }
+        by_service[service["serviceId"]] = slot(service["serviceId"], service.get("name") or "")
+    expiry_key = mapping.get("physicalCardExpDate", "expiryDate")
     for row in rows:
         key = str(row.get("serviceId", "") or "")
-        slot = by_service.get(key)
-        if slot is None:
-            slot = by_service.setdefault(key, {"serviceId": key, "name": "(not in this project)",
-                                               "total": 0, "active": 0, "free": 0,
-                                               "usedHere": 0, "statuses": {}})
+        entry = by_service.get(key)
+        if entry is None:
+            entry = by_service.setdefault(key, slot(key, "(not in this project)"))
         status = ""
         for candidate in ("status", "cardStatus", "cardStatusCode"):
             if row.get(candidate) is not None:
                 status = str(row.get(candidate)).upper()
                 break
-        slot["total"] += 1
-        slot["statuses"][status or "?"] = slot["statuses"].get(status or "?", 0) + 1
+        number = str(row.get(number_key, "") or "")
+        card = {"cardNo": number, "expiry": str(row.get(expiry_key, "") or ""), "status": status}
+        entry["total"] += 1
+        entry["statuses"][status or "?"] = entry["statuses"].get(status or "?", 0) + 1
         if status != wanted:
+            # not ACTIVE on the portal - terminated, suspended, whatever it says
+            if want_cards and len(entry["deadCards"]) < limit:
+                entry["deadCards"].append(card)
             continue
-        slot["active"] += 1
-        if str(row.get(number_key, "") or "") in used:
-            slot["usedHere"] += 1
+        entry["active"] += 1
+        if number in used:
+            entry["usedHere"] += 1
+            if want_cards and len(entry["usedCards"]) < limit:
+                entry["usedCards"].append(card)
         else:
-            slot["free"] += 1
+            entry["free"] += 1
+            if want_cards and len(entry["freeCards"]) < limit:
+                entry["freeCards"].append(card)
 
     services_out = sorted(by_service.values(), key=lambda item: item["serviceId"])
     return {
@@ -842,7 +856,10 @@ def api_card_stock(payload):
             "active": sum(s["active"] for s in services_out),
             "free": sum(s["free"] for s in services_out),
             "usedHere": sum(s["usedHere"] for s in services_out),
+            "dead": sum(s["total"] - s["active"] for s in services_out),
         },
+        "detail": want_cards,
+        "limitPerService": limit,
     }
 
 
@@ -873,7 +890,51 @@ def api_records(_payload):
     }
 
 
+# --------------------------------------------------------------------------- #
+# Accounts
+# --------------------------------------------------------------------------- #
+accounts = Accounts()
+
+# everything else needs a session. These four are what you can reach without one, plus the
+# static files - the pages themselves hold no data, every figure on them comes from an endpoint.
+PUBLIC_ROUTES = {"/api/auth/signup", "/api/auth/login", "/api/auth/logout", "/api/auth/me"}
+
+
+def api_auth_signup(payload):
+    """Create an account. The first one made becomes the owner."""
+    try:
+        user = accounts.signup(payload.get("username", ""), payload.get("password", ""),
+                               payload.get("display", ""))
+    except AuthError as error:
+        return {"ok": False, "error": str(error)}
+    token = accounts.start_session(user["username"])
+    return {"ok": True, "user": user, "token": token, "first": user["role"] == "owner"}
+
+
+def api_auth_login(payload):
+    try:
+        user = accounts.login(payload.get("username", ""), payload.get("password", ""))
+    except AuthError as error:
+        return {"ok": False, "error": str(error)}
+    return {"ok": True, "user": user, "token": accounts.start_session(user["username"])}
+
+
+def api_auth_logout(payload):
+    accounts.end_session(payload.get("token") or "")
+    return {"ok": True}
+
+
+def api_auth_me(payload):
+    """Who the caller is, and whether anyone has signed up yet - that is all a stranger learns."""
+    user = accounts.session_user(payload.get("token") or "")
+    return {"ok": True, "user": user, "signedIn": bool(user), "hasAccounts": accounts.count() > 0}
+
+
 ROUTES = {
+    "/api/auth/signup": api_auth_signup,
+    "/api/auth/login": api_auth_login,
+    "/api/auth/logout": api_auth_logout,
+    "/api/auth/me": api_auth_me,
     "/api/bootstrap": api_bootstrap,
     "/api/body": api_body,
     "/api/randomize": api_randomize,
@@ -932,7 +993,7 @@ class Handler(BaseHTTPRequestHandler):
             return {}
         headers = {
             "Access-Control-Allow-Origin": origin,
-            "Access-Control-Allow-Headers": "Content-Type",
+            "Access-Control-Allow-Headers": "Content-Type, X-Kona-Session",
             "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
             "Access-Control-Max-Age": "600",
             "Vary": "Origin",
@@ -972,8 +1033,12 @@ class Handler(BaseHTTPRequestHandler):
         if path in ("/", "/index.html"):
             return self._static("index.html")
         if path.startswith("/api/history/"):
+            if not self._allowed(path):
+                return self._json(401, {"error": "Sign in to use this.", "signedOut": True})
             return self._history_file(path[len("/api/history/"):])
         if path in ROUTES:
+            if not self._allowed(path):
+                return self._json(401, {"error": "Sign in to use this.", "signedOut": True})
             return self._run(ROUTES[path], {})
         return self._static(path.lstrip("/"))
 
@@ -982,6 +1047,8 @@ class Handler(BaseHTTPRequestHandler):
         handler = ROUTES.get(path)
         if not handler:
             return self._json(404, {"error": "unknown endpoint {0}".format(path)})
+        if not self._allowed(path):
+            return self._json(401, {"error": "Sign in to use this.", "signedOut": True})
         try:
             length = int(self.headers.get("Content-Length") or 0)
             payload = json.loads(self.rfile.read(length).decode("utf-8")) if length else {}
@@ -997,6 +1064,28 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             traceback.print_exc()
             return self._json(500, {"error": traceback.format_exc(limit=3)})
+
+    def _token(self):
+        """The session token: a header on same-origin and cross-origin calls alike."""
+        header = self.headers.get("X-Kona-Session")
+        if header:
+            return header.strip()
+        cookie = self.headers.get("Cookie") or ""
+        for piece in cookie.split(";"):
+            name, _, value = piece.strip().partition("=")
+            if name == "konaSession":
+                return value.strip()
+        return ""
+
+    def _allowed(self, path):
+        """Every endpoint but the four auth ones needs a live session.
+
+        The check is here rather than in each handler so a new endpoint is protected by default -
+        forgetting to add a guard cannot quietly expose the next thing.
+        """
+        if path in PUBLIC_ROUTES:
+            return True
+        return bool(accounts.session_user(self._token()))
 
     def _history_file(self, name):
         safe = os.path.basename(name)

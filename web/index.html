@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <title>KONA WebView Helper</title>
 <link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="appearance.css">
 <link rel="stylesheet" href="flowchart.css">
 <link rel="stylesheet" href="assistant.css">
 <script>
@@ -14,6 +15,25 @@
     var dark = saved ? saved === "dark"
       : window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
     document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+    /* the saved font and button shape, before first paint; appearance.js does the colours
+       as soon as it loads, which is before the body is drawn */
+    try {
+      var look = JSON.parse(localStorage.getItem("konaAppearance") || "{}");
+      if (look.mode === "custom") {
+        if (look.font === "serif") {
+          document.documentElement.style.setProperty("--font",
+            'Georgia,"Times New Roman","Malgun Gothic",serif');
+        } else if (look.font === "mono") {
+          document.documentElement.style.setProperty("--font",
+            'Consolas,"Cascadia Mono","Courier New","Malgun Gothic",monospace');
+        } else if (look.font === "grotesk") {
+          document.documentElement.style.setProperty("--font",
+            '"Segoe UI Variable Display","Segoe UI",Inter,"Helvetica Neue",Arial,sans-serif');
+        }
+        if (look.shape === "pill") document.documentElement.style.setProperty("--btn-radius", "999px");
+        if (look.shape === "square") document.documentElement.style.setProperty("--btn-radius", "3px");
+      }
+    } catch (e) { /* storage blocked */ }
   })();
 </script>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%236D28D9'/><rect x='6.5' y='8.5' width='19' height='15' rx='3' fill='none' stroke='white' stroke-width='2'/><path d='M6.5 13h19' stroke='white' stroke-width='2'/><rect x='10' y='16' width='12' height='4.6' rx='1.3' fill='white'/></svg>">
@@ -109,6 +129,30 @@
       <button class="theme-toggle" id="themeToggle" title="Switch between light and dark">
         <span id="themeIcon">☾</span><span id="themeLabel">Dark</span>
       </button>
+      <div class="apx">
+        <button class="theme-toggle apx__open" id="btnAppearance" title="Colour, font, buttons">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
+               stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 3.2a8.8 8.8 0 1 0 0 17.6c1.3 0 2-.8 2-1.8 0-1.6-1.6-1.7-1.6-3 0-.9.8-1.6 1.8-1.6h1.4c2.6 0 4.4-1.8 4.4-4.4 0-3.8-3.5-6.8-8-6.8z"/>
+            <circle cx="7.8" cy="11.4" r="1.1" fill="currentColor" stroke="none"/>
+            <circle cx="10.6" cy="7.6" r="1.1" fill="currentColor" stroke="none"/>
+            <circle cx="15" cy="8.4" r="1.1" fill="currentColor" stroke="none"/>
+          </svg>
+          <span>Theme</span>
+        </button>
+        <div class="apx__menu" id="appearanceMenu"></div>
+      </div>
+      <div class="who" id="whoBox">
+        <span class="who__avatar" id="whoAvatar">?</span>
+        <b class="who__name" id="whoName">—</b>
+        <button class="who__out" id="btnSignOut" type="button" title="Sign out">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
+               stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M14.5 8.4V5.8a1.8 1.8 0 0 0-1.8-1.8H5.8A1.8 1.8 0 0 0 4 5.8v12.4a1.8 1.8 0 0 0 1.8 1.8h6.9a1.8 1.8 0 0 0 1.8-1.8v-2.6"/>
+            <path d="M9.4 12h11M17.2 8.6 20.6 12l-3.4 3.4"/>
+          </svg>
+        </button>
+      </div>
     </header>
 
     <div class="content">
@@ -482,6 +526,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<script src="appearance.js"></script>
 <script src="app.js"></script>
 <script src="flowchart.js"></script>
 <script src="flowvideo.js"></script>

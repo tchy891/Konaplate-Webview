@@ -69,6 +69,85 @@ function featureLabel(key) {
 }
 
 /* ----------------------------------------------------------- the topics */
+/* ------------------------------------------------------------ public mode */
+/* On the sign-in page KonaRelay answers a handful of questions about what the console is, and
+   nothing else. These answers are written here and name no project, no ASP, no key, no count -
+   there is no bridge to the console on that page and no action it can run, so there is nothing
+   for it to leak even if it were asked. */
+const PUBLIC = document.body && document.body.dataset
+  && document.body.dataset.relay === "public";
+
+const PUBLIC_TOPICS = [
+  {
+    id: "pub-what",
+    chip: "What is this tool?",
+    q: "What is this tool?",
+    tags: ["what", "tool", "about", "console", "purpose", "this"],
+    a: () => "It is a console for testing the <b>KONA PLATE WebView APIs</b>. The same handful "
+      + "of calls that a wallet app makes - registering a user, adding a bank account, applying "
+      + "for a card, registering the card - run here from one screen, in order, without "
+      + "Postman.",
+    next: ["pub-how", "pub-why", "pub-account"],
+  },
+  {
+    id: "pub-how",
+    chip: "How does it work?",
+    q: "How does it work?",
+    tags: ["how", "works", "working", "chain", "order", "steps"],
+    a: () => "Each call needs something only the call before it produced - an id here, a code "
+      + "there. The console carries those values forward for you, generates a fresh test "
+      + "identity for every run, and keeps a record of what it sent and what came back."
+      + "<br><br>You can run one step on its own, or the whole sequence with one button.",
+    next: ["pub-why", "pub-safe", "pub-account"],
+  },
+  {
+    id: "pub-why",
+    chip: "Why not just use Postman?",
+    q: "Why not just use Postman?",
+    tags: ["postman", "curl", "why", "instead", "better", "manual"],
+    a: () => "By hand it is a lot of copying: send one request, find the value in the response, "
+      + "paste it into the next, repeat, and start again when something is mistyped. The "
+      + "console does that part, so a full pass takes seconds instead of minutes - and every "
+      + "pass is recorded, which is what makes the results worth anything.",
+    next: ["pub-how", "pub-account", "pub-what"],
+  },
+  {
+    id: "pub-account",
+    chip: "Do I need an account?",
+    q: "Do I need an account?",
+    tags: ["account", "sign", "signup", "login", "register", "password", "need"],
+    a: () => "Yes. Everything the console shows - the environments it talks to, the test data, "
+      + "the record of past runs - sits behind the sign-in on this page."
+      + "<br><br>If nobody has an account yet, use <b>Create account</b>: the first one made "
+      + "becomes the owner of this copy of the console.",
+    next: ["pub-safe", "pub-what", "pub-who"],
+  },
+  {
+    id: "pub-safe",
+    chip: "Where does my password go?",
+    q: "Where does my password go?",
+    tags: ["password", "safe", "secure", "stored", "where", "privacy", "security"],
+    a: () => "Nowhere you can read it back, and nowhere off this machine. The server keeps only "
+      + "a salted hash of it, and signing in gives your browser a random session token that "
+      + "expires on its own."
+      + "<br><br>The accounts file is local to this machine.",
+    next: ["pub-account", "pub-what", "pub-who"],
+  },
+  {
+    id: "pub-who",
+    chip: "Are you an AI?",
+    q: "Are you an AI?",
+    tags: ["ai", "bot", "llm", "you", "who", "chatgpt", "claude", "model"],
+    a: () => "I am <b>KonaRelay</b>, the console's assistant - a written one, not a language "
+      + "model, so I answer from what was written for this tool rather than making something "
+      + "up.<br><br>On this page I only explain what the console is. Sign in and I can read "
+      + "your own data and run the modules for you.",
+    next: ["pub-what", "pub-account"],
+  },
+];
+
+const PUBLIC_STARTERS = ["pub-what", "pub-how", "pub-account", "pub-who"];
+
 /* chip  : the short label on the button
    q     : what gets shown as the asked question
    tags  : extra words free text can match on
@@ -236,7 +315,7 @@ const TOPICS = [
       + "<code>000163...</code>. The project dropdown lists only that affiliate's projects, "
       + "and the serviceId list only that project's services. Nothing from another ASP can "
       + "appear on the form.",
-    next: ["wrong-asp", "no-card-for-service", "project-name"],
+    next: ["act-services", "act-cards", "wrong-asp"],
   },
   {
     id: "wrong-asp",
@@ -248,7 +327,7 @@ const TOPICS = [
       + "lookup is refused rather than filtered, because loading it would hand this affiliate "
       + "another one's ASP ID, key and service IDs. Switch the affiliate first, or pick one of "
       + "this affiliate's own projects from the dropdown.",
-    next: ["affiliate-services", "ikuka", "project-name"],
+    next: ["act-asp", "act-projects", "ikuka"],
   },
   {
     id: "access-key",
@@ -562,31 +641,66 @@ const ACTIONS = [
     },
     run: runFlowAction,
   },
+
+  /* --- everything about one project. They share the same two questions. --- */
+  {
+    id: "act-asp",
+    chip: "Find the ASP ID",
+    q: "Find the ASP ID for a project",
+    tags: ["asp", "aspid", "asp id", "find", "header", "x-km-user-aspid", "which asp"],
+    slots: ["affiliate", "project"],
+    preset: { needProject: true },
+    run: aspAction,
+  },
+  {
+    id: "act-key",
+    chip: "Access key for this project",
+    q: "What is the access key for this project?",
+    tags: ["key", "access key", "accesskey", "oasl", "credential", "credentials", "secret",
+           "x-km-access-key"],
+    slots: ["affiliate", "project"],
+    preset: { needProject: true },
+    run: keyAction,
+  },
+  {
+    id: "act-services",
+    chip: "Service IDs",
+    q: "Which service IDs does this project have?",
+    tags: ["services", "service", "serviceid", "service id", "products", "which service"],
+    slots: ["affiliate", "project"],
+    preset: { needProject: true },
+    run: servicesAction,
+  },
   {
     id: "act-cards",
-    chip: "How many cards are free?",
-    q: "How many ACTIVE cards are available?",
-    tags: ["cards", "card", "active", "available", "stock", "free", "many", "left", "remaining",
-           "count", "how"],
+    chip: "Active / free cards",
+    q: "How many cards are free on this project?",
+    tags: ["cards", "card", "active", "available", "free", "stock", "left", "remaining",
+           "how many cards", "usable"],
     slots: ["affiliate", "version", "project"],
-    run: cardStockAction,
+    preset: { needProject: true },
+    run: freeCardsAction,
+  },
+  {
+    id: "act-dead-cards",
+    chip: "Used / terminated cards",
+    q: "Which cards are used or terminated?",
+    tags: ["used", "terminated", "spent", "consumed", "dead", "gone", "burnt", "exhausted",
+           "used cards", "terminated cards"],
+    slots: ["affiliate", "version", "project"],
+    preset: { needProject: true },
+    run: deadCardsAction,
   },
   {
     id: "act-projects",
     chip: "List the projects",
     q: "List the projects for an affiliate",
-    tags: ["projects", "project", "list", "which", "portal", "available"],
+    tags: ["projects", "project", "list", "which projects", "portal"],
     slots: ["affiliate"],
     run: listProjectsAction,
   },
-  {
-    id: "act-services",
-    chip: "List a project's service IDs",
-    q: "List a project's service IDs",
-    tags: ["services", "service", "serviceid", "list", "products", "which"],
-    slots: ["affiliate", "version", "project"],
-    run: listServicesAction,
-  },
+
+  /* --- everything about what you have already done --------------------- */
   {
     id: "act-users",
     chip: "List the users I created",
@@ -607,18 +721,23 @@ const ACTIONS = [
     id: "act-runs",
     chip: "List my recent runs",
     q: "List my recent runs",
-    tags: ["runs", "recent", "history", "last", "list", "calls", "sent"],
+    tags: ["runs", "recent", "history", "last", "list", "calls", "sent", "recently"],
     slots: [],
     run: listRunsAction,
   },
 ];
 
-const BY_ID = {};
-TOPICS.forEach((topic) => { BY_ID[topic.id] = topic; });
-ACTIONS.forEach((action) => { BY_ID[action.id] = action; });
+/* On the sign-in page there is nothing but the public answers: no actions, and none of the
+   topics that name a project, an ASP, a key or a count. */
+const KNOWLEDGE = PUBLIC ? PUBLIC_TOPICS : TOPICS;
+const DOINGS = PUBLIC ? [] : ACTIONS;
 
-const STARTERS = ["act-run", "act-cards", "act-counts", "what-is-this", "project-name",
-                  "error-003-027"];
+const BY_ID = {};
+KNOWLEDGE.forEach((topic) => { BY_ID[topic.id] = topic; });
+DOINGS.forEach((action) => { BY_ID[action.id] = action; });
+
+const STARTERS = PUBLIC ? PUBLIC_STARTERS
+  : ["act-run", "act-asp", "act-cards", "act-counts", "what-is-this", "error-003-027"];
 
 async function safeAsync(name, fallback) {
   try {
@@ -651,18 +770,22 @@ const SLOTS = {
     },
   },
   project: {
-    ask: "Which project? These are the ones that belong to this affiliate.",
+    ask: "Which project?",
     optional: true,
     /* a project belongs to exactly one affiliate, so there is no single answer that covers
        "all affiliates" - each target uses whatever it already has loaded, or config.json */
     skip: (values) => values.affiliate === "ALL",
     fallback: "",
     options: async (values) => {
-      const version = values.version === "BOTH" ? "V1" : values.version;
+      const version = values.version === "BOTH" ? "V1" : (values.version || "V1");
       const result = await bridgeFn("projectsFor")(values.affiliate, version);
-      if (!result.ok) return [{ value: "", label: "Carry on without a project" }];
+      if (!result.ok) {
+        return values.needProject ? [] : [{ value: "", label: "Carry on without a project" }];
+      }
+      state.projectNames = (state.projectNames || []).concat(result.projects);
       const list = result.projects.map((name) => ({ value: name, label: name }));
-      list.push({ value: "", label: "No project - use config.json" });
+      /* only where running without one is a real option */
+      if (!values.needProject) list.push({ value: "", label: "No project - use config.json" });
       return list;
     },
   },
@@ -824,7 +947,9 @@ function seedFromConsole(values) {
 }
 
 function startAction(action, prefill, echo, keepTrace) {
-  pending = { action: action, values: Object.assign({}, prefill || {}), picking: null };
+  pending = { action: action,
+              values: Object.assign({}, action.preset || {}, prefill || {}),
+              picking: null };
   if (echo !== false) bubble("me", esc(action.q));
   if (!keepTrace) {
     trace = think();
@@ -1028,39 +1153,137 @@ async function runFlowAction(values) {
       : ["act-runs", "error-003-027", "read-response"]);
 }
 
-async function cardStockAction(values) {
+/* ---------------------------------------------------- what a project holds */
+/* These four all answer about one project, so they share one lookup: pick the affiliate, pick
+   the project, and the portal is read once. Each one hands on to the questions that usually
+   follow it, and never back to itself. */
+async function openProject(values, say) {
+  let loaded = bridgeFn("loadedProject")(values.affiliate, values.version);
+  if (!loaded || loaded.projectName !== values.project) {
+    traceStep("Signing in to the portal and reading <b>" + esc(values.project) + "</b>.");
+    const result = await bridgeFn("loadProject")(values.affiliate, values.version, values.project);
+    if (!result.ok) {
+      say.innerHTML = "I could not load that project: " + esc(result.error);
+      traceStep("The lookup was refused.", "end");
+      return null;
+    }
+    loaded = bridgeFn("loadedProject")(values.affiliate, values.version);
+  } else {
+    traceStep("Already loaded for this target - no second portal call needed.");
+  }
+  return loaded;
+}
+
+async function aspAction(values) {
   const say = bubble("bot", '<span class="chipdots"><i></i><i></i><i></i></span>');
   if (!trace) trace = think();
-  traceStep("Calling <code>/api/card-stock</code> for <b>"
-    + esc(values.project || "the configured project")
-    + "</b> - the server signs in to the portal and reads Test Data.");
-  const data = await bridgeFn("cardStock")(values.affiliate, values.version,
-                                            values.project || "");
+  const loaded = await openProject(values, say);
+  if (!loaded) return;
+  traceStep("Summary tab says ASP <b>" + esc(loaded.aspId) + "</b>.", "end");
+  say.innerHTML = "<b>" + esc(values.project) + "</b> belongs to"
+    + table(["ASP ID", "Project ID", "Services"], [[
+      "<b>" + esc(loaded.aspId) + "</b>", codeShort(loaded.projectId),
+      String((loaded.services || []).length)]])
+    + "It goes out as the <code>X-KM-User-AspId</code> header, and it is already filled in on "
+    + "the Target panel for " + esc(affiliateLabel(values.affiliate)) + " "
+    + esc(values.version) + ".";
+  suggest("You might ask next", ["act-key", "act-services", "act-cards"]);
+}
+
+async function keyAction(values) {
+  const say = bubble("bot", '<span class="chipdots"><i></i><i></i><i></i></span>');
+  if (!trace) trace = think();
+  const loaded = await openProject(values, say);
+  if (!loaded) return;
+  if (!loaded.accessKey) {
+    say.innerHTML = "That project has no ACTIVE key I can use.";
+    traceStep("No usable key on the project.", "end");
+    suggest("You might ask next", ["access-key", "act-projects"]);
+    return;
+  }
+  traceStep("Credentials tab: an ACTIVE " + esc(loaded.keyType || "OASL") + " key.", "end");
+  say.innerHTML = "<b>" + esc(values.project) + "</b> uses this key:"
+    + table(["Key type", "Access key"], [[
+      esc(loaded.keyType || "OASL"),
+      '<code title="' + esc(loaded.accessKey) + '">' + esc(loaded.accessKey) + "</code>"]])
+    + "It is already in the <code>X-KM-Access-Key</code> field for "
+    + esc(affiliateLabel(values.affiliate)) + " " + esc(values.version)
+    + '. <span class="chipstep">OASL is the WebView key; OMCS on the same portal screen belongs '
+    + "to another service and is never used here.</span>";
+  suggest("You might ask next", ["act-services", "act-cards", "act-run"]);
+}
+
+async function servicesAction(values) {
+  const say = bubble("bot", '<span class="chipdots"><i></i><i></i><i></i></span>');
+  if (!trace) trace = think();
+  const loaded = await openProject(values, say);
+  if (!loaded) return;
+  traceStep(loaded.services.length + " card service(s) on this project.", "end");
+  say.innerHTML = "<b>" + esc(values.project) + "</b> offers <b>" + loaded.services.length
+    + "</b> card service(s):"
+    + table(["Service ID", "Name"], loaded.services.map((service) => [
+      "<code>" + esc(service.serviceId) + "</code>", esc(service.name || "—")]))
+    + '<span class="chipstep">All of them open with ASP ' + esc(loaded.aspId).slice(0, 6)
+    + " - that is what ties them to this affiliate.</span>";
+  suggest("You might ask next", ["act-cards", "act-dead-cards", "act-run"]);
+}
+
+async function freeCardsAction(values) {
+  const say = bubble("bot", '<span class="chipdots"><i></i><i></i><i></i></span>');
+  if (!trace) trace = think();
+  traceStep("Calling <code>/api/card-stock</code> for <b>" + esc(values.project)
+    + "</b> - the server reads Test Data on the portal.");
+  const data = await bridgeFn("cardStock")(values.affiliate, values.version, values.project, true);
   if (!data || !data.ok) {
     say.innerHTML = "I could not read the card data: " + esc((data && data.error) || "no answer");
     return;
   }
-  const rows = data.services.filter((service) => service.total > 0);
-  const head = "<b>" + esc(data.projectName) + "</b> holds <b>" + data.totals.total
-    + "</b> test cards. <b>" + data.totals.free + "</b> are free to use right now"
-    + (data.totals.usedHere
-      ? " (" + data.totals.active + " " + esc(data.statusFilter) + ", minus "
-        + data.totals.usedHere + " this tool has already sent)" : "") + ".";
-  say.innerHTML = head + table(
-    ["Service", "Name", "Free", data.statusFilter, "Total"],
-    rows.map((service) => [
-      "<code>" + esc(service.serviceId) + "</code>", esc(service.name),
-      "<b>" + service.free + "</b>", String(service.active), String(service.total),
-    ]))
-    + (rows.length < data.services.length
-      ? '<span class="chipstep">' + (data.services.length - rows.length)
-        + " service(s) have no cards at all.</span>" : "")
-    + (data.truncated
-      ? '<span class="chipstep">More cards exist than one page returns - these are the first '
-        + 'page.</span>' : "");
-  const empty = rows.filter((service) => service.free === 0).length;
+  const rows = data.services.filter((service) => service.free > 0);
+  traceStep(data.totals.free + " free of " + data.totals.active + " "
+    + esc(data.statusFilter) + ".", "end");
+  say.innerHTML = "<b>" + esc(data.projectName) + "</b> has <b>" + data.totals.free
+    + "</b> card(s) free to use right now, of " + data.totals.active + " "
+    + esc(data.statusFilter) + "."
+    + (rows.length ? table(["Service", "Free", "Next ones up"], rows.map((service) => [
+      "<code>" + esc(service.serviceId) + "</code>", "<b>" + service.free + "</b>",
+      service.freeCards.slice(0, 3).map((card) => "<code>" + esc(card.cardNo) + "</code>")
+        .join(" ") || "—"]))
+      : "<br><br>Every service has run dry.")
+    + '<span class="chipstep">Free means ACTIVE on the portal and never sent by this tool. '
+    + "Card Registration takes the first one of these for the service it applied on.</span>";
   suggest("You might ask next",
-    empty ? ["no-card-for-service", "act-run", "portal-cards"] : ["act-run", "act-services", "portal-cards"]);
+    rows.length ? ["act-run", "act-dead-cards", "act-services"]
+      : ["act-dead-cards", "no-card-for-service", "act-services"]);
+}
+
+async function deadCardsAction(values) {
+  const say = bubble("bot", '<span class="chipdots"><i></i><i></i><i></i></span>');
+  if (!trace) trace = think();
+  traceStep("Calling <code>/api/card-stock</code> for <b>" + esc(values.project) + "</b>.");
+  const data = await bridgeFn("cardStock")(values.affiliate, values.version, values.project, true);
+  if (!data || !data.ok) {
+    say.innerHTML = "I could not read the card data: " + esc((data && data.error) || "no answer");
+    return;
+  }
+  const rows = data.services.filter((s) => s.usedHere > 0 || s.total - s.active > 0);
+  traceStep(data.totals.usedHere + " sent from here, " + data.totals.dead
+    + " not ACTIVE on the portal.", "end");
+  say.innerHTML = "<b>" + esc(data.projectName) + "</b>: <b>" + data.totals.usedHere
+    + "</b> card(s) already sent by this tool and <b>" + data.totals.dead
+    + "</b> the portal no longer lists as " + esc(data.statusFilter) + "."
+    + (rows.length ? table(["Service", "Sent here", "Not active", "Examples"],
+      rows.map((service) => [
+        "<code>" + esc(service.serviceId) + "</code>", String(service.usedHere),
+        String(service.total - service.active),
+        (service.usedCards.concat(service.deadCards)).slice(0, 2)
+          .map((card) => "<code>" + esc(card.cardNo) + "</code>"
+            + (card.status && card.status !== data.statusFilter
+              ? " " + esc(card.status.toLowerCase()) : " sent")).join("<br>") || "—"]))
+      : "<br><br>Nothing used or terminated yet - all of them are still free.")
+    + '<span class="chipstep">These two are different things. A card sent from here still reads '
+    + "ACTIVE on the portal, which is why it is tracked separately - offering it again is what "
+    + "produces <code>003_027</code>.</span>";
+  suggest("You might ask next", ["act-cards", "error-003-027", "portal-cards"]);
 }
 
 async function listProjectsAction(values) {
@@ -1071,35 +1294,13 @@ async function listProjectsAction(values) {
   const result = await bridgeFn("projectsFor")(values.affiliate, "V1");
   if (!result.ok) { say.innerHTML = "I could not read that list: " + esc(result.error); return; }
   state.projectNames = result.projects.slice();
+  traceStep(result.projects.length + " project(s) on that ASP.", "end");
   say.innerHTML = "<b>" + esc(affiliateLabel(values.affiliate)) + "</b> owns <b>"
     + result.projects.length + "</b> project(s) on the portal:<ul>"
     + result.projects.map((name) => "<li>" + esc(name) + "</li>").join("")
-    + '</ul><span class="chipstep">Only this affiliate\'s own - a project from another ASP '
+    + '</ul><span class="chipstep">Only the ones on this ASP - a project from another affiliate '
     + 'cannot be loaded here.</span>';
-  suggest("You might ask next", ["act-cards", "act-services", "affiliate-services"]);
-}
-
-async function listServicesAction(values) {
-  if (!values.project) {
-    bubble("bot", "That needs a project - the service IDs belong to one.");
-    suggest("You might ask next", ["act-projects", "affiliate-services"]);
-    return;
-  }
-  const say = bubble("bot", '<span class="chipdots"><i></i><i></i><i></i></span>');
-  let loaded = bridgeFn("loadedProject")(values.affiliate, values.version);
-  if (!loaded || loaded.projectName !== values.project) {
-    const result = await bridgeFn("loadProject")(values.affiliate, values.version,
-                                                 values.project);
-    if (!result.ok) { say.innerHTML = "Could not load it: " + esc(result.error); return; }
-    loaded = bridgeFn("loadedProject")(values.affiliate, values.version);
-  }
-  say.innerHTML = "<b>" + esc(values.project) + "</b> offers <b>" + loaded.services.length
-    + "</b> card service(s):"
-    + table(["Service ID", "Name"], loaded.services.map((service) => [
-      "<code>" + esc(service.serviceId) + "</code>", esc(service.name || "—")]))
-    + '<span class="chipstep">ASP ' + esc(loaded.aspId)
-    + " - every one of these opens with the same six digits.</span>";
-  suggest("You might ask next", ["act-cards", "act-run", "affiliate-services"]);
+  suggest("You might ask next", ["act-asp", "act-services", "act-cards"]);
 }
 
 async function listUsersAction() {
@@ -1185,11 +1386,25 @@ function words(text) {
 /* Word overlap alone gets a few sentences wrong: "apply card and card registration" is full of
    card words but asks for a run, and "what did I run recently" is full of run words but asks for
    a list. These are the phrasings that decide it, applied as a nudge on top of the score. */
+/* Sure enough to answer, or only sure enough to offer? A strong score will do, and so will a
+   weaker one that accounts for the whole question - "cards" or "tcIdList" is the whole thing
+   asked. One stray word out of five is not: "who won the match" happens to contain "who", and
+   answering it with a list of users would be worse than saying so. */
+function confident(hit) {
+  if (!hit || hit.base < 2) return false;
+  return hit.base >= 4 || hit.matched.length === hit.asked;
+}
+
 /* Naming a module only means "run it" when the sentence is an instruction. "Why is bank inquiry
    empty" names a module too, and wants the explanation. */
 const ASKING = new RegExp("\\b(why|what|when|which|who|where|how|does|do i|can i|should|is|are|was|were|explain|mean|meaning|difference)\\b");
 
 const HINTS = [
+  { id: "act-asp", boost: 6, test: (t) => /\basp\b|\basp id\b|\baspid\b/.test(t) },
+  { id: "act-key", boost: 6, test: (t) => /\b(access key|accesskey|api key|credential|oasl)\b/.test(t) },
+  { id: "act-dead-cards", boost: 6, test: (t) => /\b(used|terminated|spent|consumed|dead)\b/.test(t)
+      && /\bcards?\b/.test(t) },
+  { id: "act-services", boost: 5, test: (t) => /\bservice ?ids?\b/.test(t) },
   { id: "act-runs", boost: 5, test: (t) => /\b(recent|recently|lately|last (few )?runs?|history)\b/.test(t) },
   { id: "act-cards", boost: 4, test: (t) => /\b(how many|count|left|available|free|remaining|stock)\b/.test(t) && /\bcards?\b/.test(t) },
   { id: "act-counts", boost: 3, test: (t) => /\b(how many|count|totals?|summary|so far)\b/.test(t) && !/\bcards?\b/.test(t) && !/\buser/.test(t) },
@@ -1215,18 +1430,24 @@ function match(question) {
   });
   /* actions score a little higher than articles about the same words: someone who types
      "how many active cards" wants the number, not the paragraph about where cards come from */
-  const scored = TOPICS.concat(ACTIONS.map((a) => Object.assign({ bonus: 2 }, a))).map((topic) => {
+  const scored = KNOWLEDGE.concat(DOINGS.map((a) => Object.assign({ bonus: 2 }, a)))
+    .map((topic) => {
     const hay = words(topic.q + " " + topic.chip + " " + (topic.tags || []).join(" "));
     let score = 0;
+    const matched = [];
     asked.forEach((word) => {
-      if (hay.indexOf(word) !== -1) score += 2;                       // whole word
-      else if (hay.some((h) => h.indexOf(word) === 0 && word.length > 3)) score += 1;
+      if (hay.indexOf(word) !== -1) { score += 2; matched.push(word); }       // whole word
+      else if (hay.some((h) => h.indexOf(word) === 0 && word.length > 3)) {
+        score += 1;
+        matched.push(word);
+      }
     });
+    const base = score;                 /* what the words alone earned, before any nudge */
     if (score && topic.bonus) score += topic.bonus;
     if (nudge[topic.id]) score += nudge[topic.id];
-    /* "how do I run the flow" is asking to be told, not asking to be run */
     if (howTo && String(topic.id).indexOf("act-") === 0) score -= 5;
-    return { topic: BY_ID[topic.id] || topic, score: score };
+    return { topic: BY_ID[topic.id] || topic, score: score, base: base, matched: matched,
+             asked: asked.length };
   }).filter((row) => row.score > 0);
   scored.sort((a, b) => b.score - a.score);
   return scored;
@@ -1234,63 +1455,79 @@ function match(question) {
 
 /* ------------------------------------------------------------- the panel */
 /* ------------------------------------------------------------- the mascot */
-/* KonaRelay is a card that stands up: a rounded card body in the console's purple, a dark visor
-   with two lit eyes, the gold EMV chip on its chest, a magnetic stripe, two arms and two legs
-   with lit soles, and an antenna that pulses when it is working. It is a product mascot, not a
-   cartoon - no cheeks, no mouth, just the visor - so it reads the same way the console does.
+/* KonaRelay is a card that stands up: a rounded card body, a dark visor with two lit eyes, the
+   gold EMV chip on its chest, a magnetic stripe, two arms and two legs with lit soles, and an
+   antenna that pulses when it is working.
+
+   Its colours are not its own - every one is a CSS variable the rest of the console already
+   uses, written as a style property because SVG presentation attributes do not read var().
+   So it follows the theme: the shipped blue, dark mode, or whatever accent you pick in the
+   Theme menu. The chip stays gold, because that is what a chip is.
    FACE is the head alone, for the round avatar in the header and beside every reply. */
 const MASCOT = '<svg viewBox="0 0 80 100" width="100%" height="100%" aria-hidden="true">'
   + '<defs>'
   + '<linearGradient id="relayBody" x1="0" y1="0" x2="1" y2="1">'
-  + '<stop offset="0" stop-color="#9B6BFF"/><stop offset="0.55" stop-color="#6D28D9"/>'
-  + '<stop offset="1" stop-color="#3C1680"/></linearGradient>'
+  + '<stop offset="0" style="stop-color:var(--brand,#149FFF)"/>'
+  + '<stop offset="0.55" style="stop-color:var(--accent-fill,#0A6FB8)"/>'
+  + '<stop offset="1" style="stop-color:var(--accent-ink,#0B4C7A)"/></linearGradient>'
   + '<linearGradient id="relayLimb" x1="0" y1="0" x2="0" y2="1">'
-  + '<stop offset="0" stop-color="#7C3AED"/><stop offset="1" stop-color="#43208F"/>'
-  + '</linearGradient>'
+  + '<stop offset="0" style="stop-color:var(--accent-fill,#0A6FB8)"/>'
+  + '<stop offset="1" style="stop-color:var(--accent-ink,#0B4C7A)"/></linearGradient>'
   + '<linearGradient id="relayChip" x1="0" y1="0" x2="0" y2="1">'
   + '<stop offset="0" stop-color="#FFE9A8"/><stop offset="1" stop-color="#DFA73A"/>'
   + '</linearGradient>'
   + '<radialGradient id="relayEye" cx="50%" cy="40%" r="60%">'
-  + '<stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#9FE8FF"/>'
-  + '</radialGradient>'
+  + '<stop offset="0" stop-color="#FFFFFF"/>'
+  + '<stop offset="1" style="stop-color:var(--teal,#39BFD3)"/></radialGradient>'
   + '</defs>'
 
   /* the shadow it floats above */
-  + '<ellipse class="chipmate__shadow" cx="40" cy="95" rx="19" ry="3.6" fill="#1A0F33"'
-  + ' opacity=".28"/>'
+  + '<ellipse class="chipmate__shadow" cx="40" cy="95" rx="19" ry="3.6"'
+  + ' style="fill:var(--toast-bg,#0F3C4B)" opacity=".26"/>'
 
   /* legs, with lit soles */
   + '<g>'
   + '<rect x="26" y="68" width="10" height="22" rx="5" fill="url(#relayLimb)"/>'
   + '<rect x="44" y="68" width="10" height="22" rx="5" fill="url(#relayLimb)"/>'
-  + '<rect class="chipmate__sole" x="26.5" y="83" width="9" height="7" rx="3.5" fill="#67E8F9"'
-  + ' opacity=".95"/>'
-  + '<rect class="chipmate__sole" x="44.5" y="83" width="9" height="7" rx="3.5" fill="#67E8F9"'
-  + ' opacity=".95"/>'
+  + '<rect class="chipmate__sole" x="26.5" y="83" width="9" height="7" rx="3.5"'
+  + ' style="fill:var(--teal,#39BFD3)" opacity=".95"/>'
+  + '<rect class="chipmate__sole" x="44.5" y="83" width="9" height="7" rx="3.5"'
+  + ' style="fill:var(--teal,#39BFD3)" opacity=".95"/>'
+  + '</g>'
+
+  /* thrusters - only lit while it is flying */
+  + '<g class="chipmate__flame" style="fill:var(--teal,#39BFD3)">'
+  + '<path d="M31 89q3 5.5 0 10.5-3-5 0-10.5z"/>'
+  + '<path d="M49 89q3 5.5 0 10.5-3-5 0-10.5z"/>'
+  + '<path d="M31 90q1.8 3.6 0 7-1.8-3.4 0-7z" fill="#FFFFFF" opacity=".85"/>'
+  + '<path d="M49 90q1.8 3.6 0 7-1.8-3.4 0-7z" fill="#FFFFFF" opacity=".85"/>'
   + '</g>'
 
   /* arms */
   + '<g class="chipmate__arm chipmate__arm--l">'
   + '<rect x="4" y="38" width="9" height="24" rx="4.5" fill="url(#relayLimb)"/>'
-  + '<circle cx="8.5" cy="60" r="5.2" fill="#8B5CF6"/></g>'
+  + '<circle cx="8.5" cy="60" r="5.2" style="fill:var(--accent-fill,#0A6FB8)"/></g>'
   + '<g class="chipmate__arm chipmate__arm--r">'
   + '<rect x="67" y="38" width="9" height="24" rx="4.5" fill="url(#relayLimb)"/>'
-  + '<circle cx="71.5" cy="60" r="5.2" fill="#8B5CF6"/></g>'
+  + '<circle cx="71.5" cy="60" r="5.2" style="fill:var(--accent-fill,#0A6FB8)"/></g>'
 
   /* the antenna - it pulses while it works */
-  + '<path d="M40 14V7" stroke="#A78BFA" stroke-width="2.4" stroke-linecap="round"/>'
-  + '<circle class="chipmate__ping" cx="40" cy="4.6" r="3.8" fill="#67E8F9"/>'
+  + '<path d="M40 14V7" style="stroke:var(--brand,#149FFF)" stroke-width="2.4"'
+  + ' stroke-linecap="round"/>'
+  + '<circle class="chipmate__ping" cx="40" cy="4.6" r="3.8"'
+  + ' style="fill:var(--teal,#39BFD3)"/>'
 
   /* the card body */
   + '<rect x="11" y="13" width="58" height="62" rx="13" fill="url(#relayBody)"/>'
-  + '<rect x="11" y="13" width="58" height="62" rx="13" fill="none" stroke="#C4A9FB"'
-  + ' stroke-opacity=".55" stroke-width="1.4"/>'
+  + '<rect x="11" y="13" width="58" height="62" rx="13" fill="none"'
+  + ' style="stroke:var(--brand,#149FFF)" stroke-opacity=".6" stroke-width="1.4"/>'
   + '<path d="M16 72 60 18v9L22 73z" fill="#FFFFFF" opacity=".08"/>'
 
   /* the visor */
-  + '<rect x="17" y="21" width="46" height="24" rx="12" fill="#140C29"/>'
-  + '<rect x="17" y="21" width="46" height="24" rx="12" fill="none" stroke="#67E8F9"'
-  + ' stroke-opacity=".35" stroke-width="1.2"/>'
+  + '<rect x="17" y="21" width="46" height="24" rx="12"'
+  + ' style="fill:var(--toast-bg,#0F3C4B)"/>'
+  + '<rect x="17" y="21" width="46" height="24" rx="12" fill="none"'
+  + ' style="stroke:var(--teal,#39BFD3)" stroke-opacity=".45" stroke-width="1.2"/>'
   + '<g>'
   + '<ellipse class="chipmate__eye" cx="31" cy="33" rx="5.4" ry="6" fill="url(#relayEye)"/>'
   + '<ellipse class="chipmate__eye" cx="49" cy="33" rx="5.4" ry="6" fill="url(#relayEye)"/>'
@@ -1304,20 +1541,42 @@ const MASCOT = '<svg viewBox="0 0 80 100" width="100%" height="100%" aria-hidden
   + '<rect x="42" y="61.5" width="12" height="3.4" rx="1.7" fill="#FFFFFF" opacity=".26"/>'
   + '</svg>';
 
+/* Your side of the conversation is marked with the first letter of the name you signed in
+   under. Before sign-in there is no name, so it falls back to a plain person. */
+function youMark() {
+  try {
+    const who = JSON.parse(localStorage.getItem("konaUser") || "null");
+    const name = ((who && (who.display || who.username)) || "").trim();
+    if (name) {
+      return '<b class="chipface__letter">' + esc(name.charAt(0).toUpperCase()) + "</b>";
+    }
+  } catch (error) { /* storage blocked - the plain mark will do */ }
+  return YOU;
+}
+
+/* the plain mark, used before anyone has signed in */
+const YOU = '<svg viewBox="0 0 24 24" width="100%" height="100%" fill="none"'
+  + ' stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"'
+  + ' aria-hidden="true">'
+  + '<circle cx="12" cy="8.4" r="3.6"/>'
+  + '<path d="M4.8 20c0-3.6 3.2-5.8 7.2-5.8s7.2 2.2 7.2 5.8"/></svg>';
+
 /* the head alone, for the round avatar */
 const FACE = '<svg viewBox="0 0 60 60" width="100%" height="100%" aria-hidden="true">'
   + '<defs>'
   + '<linearGradient id="relayFaceBody" x1="0" y1="0" x2="1" y2="1">'
-  + '<stop offset="0" stop-color="#9B6BFF"/><stop offset="1" stop-color="#4C1D95"/>'
-  + '</linearGradient>'
+  + '<stop offset="0" style="stop-color:var(--brand,#149FFF)"/>'
+  + '<stop offset="1" style="stop-color:var(--accent-ink,#0B4C7A)"/></linearGradient>'
   + '<radialGradient id="relayFaceEye" cx="50%" cy="40%" r="60%">'
-  + '<stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#9FE8FF"/>'
-  + '</radialGradient>'
+  + '<stop offset="0" stop-color="#FFFFFF"/>'
+  + '<stop offset="1" style="stop-color:var(--teal,#39BFD3)"/></radialGradient>'
   + '</defs>'
-  + '<path d="M30 7V3" stroke="#A78BFA" stroke-width="2.6" stroke-linecap="round"/>'
-  + '<circle cx="30" cy="2.6" r="2.6" fill="#67E8F9"/>'
+  + '<path d="M30 7V3" style="stroke:var(--brand,#149FFF)" stroke-width="2.6"'
+  + ' stroke-linecap="round"/>'
+  + '<circle cx="30" cy="2.6" r="2.6" style="fill:var(--teal,#39BFD3)"/>'
   + '<rect x="6" y="7" width="48" height="46" rx="13" fill="url(#relayFaceBody)"/>'
-  + '<rect x="11" y="15" width="38" height="21" rx="10.5" fill="#140C29"/>'
+  + '<rect x="11" y="15" width="38" height="21" rx="10.5"'
+  + ' style="fill:var(--toast-bg,#0F3C4B)"/>'
   + '<ellipse class="chipmate__eye" cx="22" cy="25.5" rx="4.6" ry="5.1" fill="url(#relayFaceEye)"/>'
   + '<ellipse class="chipmate__eye" cx="38" cy="25.5" rx="4.6" ry="5.1" fill="url(#relayFaceEye)"/>'
   + '<rect x="15" y="41" width="13" height="7" rx="2" fill="#FFE9A8" opacity=".9"/>'
@@ -1325,7 +1584,10 @@ const FACE = '<svg viewBox="0 0 60 60" width="100%" height="100%" aria-hidden="t
   + '</svg>';
 
 const SEEN_KEY = "konaChipSeen";
-const SPOT_KEY = "konaRelaySpot";
+/* Each page remembers its own spot: the console keeps its corner, the sign-in page stands
+   beside the card. Dragging on one does not move the other. */
+const SPOT_KEY = PUBLIC ? "konaRelaySpotGate" : "konaRelaySpot";
+const DOCK_W = 88, DOCK_H = 110;
 
 let dock, panel, body, askInput, open = false, built = false;
 
@@ -1347,8 +1609,16 @@ function build() {
   dock = document.createElement("div");
   dock.className = "chipdock has-news";
   dock.id = "chipDock";
-  const spot = savedSpot();
-  place(spot ? spot.right : 22, spot ? spot.bottom : 20);
+  const spot = savedSpot() || defaultSpot();
+  place(spot.right, spot.bottom);
+  /* until it has been dragged, it keeps its place as the window changes size */
+  window.addEventListener("resize", () => {
+    if (!savedSpot()) {
+      const fresh = defaultSpot();
+      place(fresh.right, fresh.bottom);
+    }
+    placePanel();
+  });
   dock.innerHTML = '<button class="chipmate" id="chipMate" type="button"'
     + ' title="Ask KonaRelay - it can run modules for you. Drag to move.">'
     + '<span class="chipmate__dot"></span>' + MASCOT + '</button>';
@@ -1391,6 +1661,7 @@ function build() {
   $("#chipClose").onclick = close;
   $("#chipBig").onclick = () => {
     panel.classList.toggle("is-big");
+    placePanel();
     $("#chipBig").title = panel.classList.contains("is-big")
       ? "Back to the small size" : "Make this bigger";
     body.scrollTop = body.scrollHeight;
@@ -1413,10 +1684,36 @@ function build() {
 /* KonaRelay can be dragged up and down its rail; the position is remembered. */
 /* Pick it up and put it anywhere. The offsets live on <html>, so the panel - which opens from
    wherever it is standing - follows it without a second source of truth. */
-function place(right, bottom) {
+/* Where it was left - as opposed to where it is standing at this moment, which is somewhere
+   else while the panel is open. The panel is always measured from the parked spot, so opening
+   it cannot chase the mascot across the screen. */
+let parked = { right: 22, bottom: 20 };
+
+function place(right, bottom, remember) {
   const root = document.documentElement.style;
   root.setProperty("--chip-right", Math.round(right) + "px");
   root.setProperty("--chip-bottom", Math.round(bottom) + "px");
+  if (remember !== false) parked = { right: Math.round(right), bottom: Math.round(bottom) };
+}
+
+/* Where it stands when nobody has moved it. On the sign-in page that is beside the login card,
+   level with its middle - measured from the card itself, so it follows any change to that
+   layout. Everywhere else, the bottom-right corner. */
+function defaultSpot() {
+  const card = PUBLIC && document.querySelector(".gate__card");
+  if (card) {
+    const box = card.getBoundingClientRect();
+    const bottom = window.innerHeight - (box.top + box.height / 2 + DOCK_H / 2);
+    /* Off the card's right edge, level with its middle. On a narrower window there is no room
+       there, so it steps to the gap between the two columns, and only then to the corner. */
+    const right = window.innerWidth - (box.right + 52 + DOCK_W);
+    if (right >= 12 && bottom >= 12) return { right: right, bottom: bottom };
+    const inner = window.innerWidth - box.left + 26;
+    if (inner + DOCK_W < window.innerWidth - 24 && bottom >= 12) {
+      return { right: inner, bottom: bottom };
+    }
+  }
+  return { right: 22, bottom: 20 };
 }
 
 function savedSpot() {
@@ -1451,6 +1748,7 @@ function dragging(mate) {
     const width = dock.offsetWidth || 90, height = dock.offsetHeight || 104;
     place(Math.min(window.innerWidth - width - 8, Math.max(8, fromRight + dx)),
           Math.min(window.innerHeight - height - 8, Math.max(8, fromBottom + dy)));
+    if (open) placePanel();       /* the panel travels with it, still full height */
   });
   mate.addEventListener("pointerup", (event) => {
     mate.releasePointerCapture(event.pointerId);
@@ -1467,6 +1765,31 @@ function dragging(mate) {
     }
     open ? close() : show();
   });
+}
+
+/* ------------------------------------------------------------ the flight */
+/* Nothing happening on the sign-in page? It takes off. Any sign of life - a key, the mouse, a
+   tap, the panel opening - and it lands again. Only on that page: in the console there is real
+   work going on and a mascot doing loops would be in the way. */
+const IDLE_MS = 9000;
+let idleTimer = null;
+
+function land() {
+  clearTimeout(idleTimer);
+  if (dock) dock.classList.remove("is-flying");
+}
+
+function restIdle() {
+  land();
+  idleTimer = setTimeout(() => {
+    if (!open && dock) dock.classList.add("is-flying");
+  }, IDLE_MS);
+}
+
+function watchForQuiet() {
+  const events = ["mousemove", "mousedown", "keydown", "touchstart", "wheel", "focusin"];
+  events.forEach((name) => window.addEventListener(name, restIdle, { passive: true }));
+  restIdle();
 }
 
 /* ---------------------------------------------------------- the greeting */
@@ -1525,13 +1848,56 @@ function showTease() {
   teaseTimer = setTimeout(() => hideTease(false), TEASE_FOR_MS);
 }
 
+/* Where the panel can sit so that it is always the same size.
+
+   It likes to be just above the mascot, but that is a preference, not a rule: dragged to the
+   middle or the top of the window there is not enough room above, so the panel slides down
+   until it fits - overlapping the mascot rather than shrinking. Same on the sides. The result
+   is a window you can always read, wherever the mascot has been parked. */
+function placePanel() {
+  if (!panel || panel.hidden) return;
+  const big = panel.classList.contains("is-big");
+
+  const height = Math.min(big ? 820 : 560, window.innerHeight - 48);
+  const width = Math.min(big ? 620 : 380, window.innerWidth - 32);
+  const bottom = Math.max(16, Math.min(parked.bottom + 118, window.innerHeight - 24 - height));
+  const right = Math.max(16, Math.min(parked.right, window.innerWidth - width - 16));
+
+  panel.style.height = height + "px";
+  panel.style.width = width + "px";
+  panel.style.bottom = bottom + "px";
+  panel.style.right = right + "px";
+
+  /* and the mascot steps out from behind it: to the panel's bottom-right corner, just under it,
+     where it is still visible and still the thing you click to close. On a window too short for
+     that, it stands beside the panel instead - never behind it. */
+  let standRight = Math.max(8, Math.min(window.innerWidth - DOCK_W - 8, right));
+  let standBottom = bottom - DOCK_H - 6;
+  if (standBottom < 10) {
+    const beside = right + width + 10;
+    if (beside + DOCK_W <= window.innerWidth - 8) {
+      standRight = beside;
+      standBottom = Math.max(10, bottom);
+    } else {
+      /* a window this small has nowhere to put it that is not behind the panel, so it waits
+         out of sight until the panel is closed */
+      dock.classList.add("is-tucked");
+      return;
+    }
+  }
+  dock.classList.remove("is-tucked");
+  place(standRight, standBottom, false);
+}
+
 function show() {
   open = true;
+  land();                      /* it cannot be out flying while you are talking to it */
   hideTease(true);
   dock.classList.add("is-open");
   dock.classList.remove("has-news");
   try { localStorage.setItem(SEEN_KEY, "1"); } catch (error) { /* storage blocked */ }
   panel.hidden = false;
+  placePanel();
   if (!body.children.length) greet();
   setTimeout(() => askInput.focus(), 120);
 }
@@ -1540,6 +1906,8 @@ function close() {
   open = false;
   dock.classList.remove("is-open");
   panel.hidden = true;
+  dock.classList.remove("is-tucked");
+  place(parked.right, parked.bottom, false);     /* back to where you left it */
 }
 
 /* ------------------------------------------------------------- messaging */
@@ -1619,23 +1987,25 @@ function traceEntities(found) {
 }
 
 /* --------------------------------------------------------------- messages */
+/* Both sides of the conversation carry a small face: KonaRelay's head on a reply, yours on
+   anything you asked - typed or tapped - so the thread reads as two people talking. */
 function bubble(kind, html) {
   const node = document.createElement("div");
   node.className = "chipmsg chipmsg--" + kind;
   node.innerHTML = html;
+  const row = document.createElement("div");
+  row.className = "chiprow chiprow--" + kind;
+  const face = document.createElement("span");
+  face.className = "chipface chipface--" + kind;
+  face.innerHTML = kind === "bot" ? FACE : youMark();
   if (kind === "bot") {
-    /* a reply is the mark plus the bubble, so it reads as coming from someone */
-    const row = document.createElement("div");
-    row.className = "chiprow";
-    const face = document.createElement("span");
-    face.className = "chipface";
-    face.innerHTML = FACE;
     row.appendChild(face);
     row.appendChild(node);
-    body.appendChild(row);
   } else {
-    body.appendChild(node);
+    row.appendChild(node);
+    row.appendChild(face);
   }
+  body.appendChild(row);
   body.scrollTop = body.scrollHeight;
   return node;
 }
@@ -1779,13 +2149,13 @@ function askFreeText(text) {
   }
 
   /* an action wins outright, with whatever the sentence already told us filled in */
-  if (hits.length && hits[0].topic.run && hits[0].score >= 3) {
+  if (hits.length && hits[0].topic.run && hits[0].score >= 3 && confident(hits[0])) {
     traceStep("That is an instruction, so I will do it rather than explain it.", "end");
     const prefill = seedFromConsole(extract(text));
     startAction(hits[0].topic, prefill, false, true);
     return;
   }
-  if (hits.length && hits[0].score >= 2) {
+  if (confident(hits[0])) {
     const topic = hits[0].topic;
     const others = hits.slice(1, 4).map((row) => row.topic.id);
     traceStep("That is a question. Answering from "
@@ -1801,13 +2171,46 @@ function askFreeText(text) {
     });
     return;
   }
-  traceStep("Below the threshold I trust, so I will not guess.", "end");
+  traceStep("Nothing scored high enough to trust, so I will not guess.", "end");
   traceDone();
-  bubble("bot", "I do not have a written answer for that one, and I will not guess at it. "
-    + "Here is what I do know about - one of these may be close:");
-  suggest("Try one of these", hits.length
-    ? hits.slice(0, 4).map((row) => row.topic.id)
-    : STARTERS);
+  dunno(hits, text);
+}
+
+/* Asked something it does not know. Three cases, three short answers: something close enough to
+   offer, a module named without saying what to do with it, or nothing at all - and then it says
+   so plainly and shows what it is for. No apology, no paragraph. */
+/* a module named in passing - "bank account" - without saying what to do with it */
+function mentionedModule(text) {
+  const lower = " " + String(text).toLowerCase() + " ";
+  const features = safe("features", []) || [];
+  for (const feature of features) {
+    const label = feature.label.toLowerCase();
+    if (lower.indexOf(label) !== -1) return feature.key;
+    const two = label.split(" ").slice(0, 2).join(" ");
+    if (two.length > 6 && lower.indexOf(two) !== -1) return feature.key;
+  }
+  return "";
+}
+
+function dunno(hits, text) {
+  const close = (hits || []).slice(0, 3).map((row) => row.topic.id);
+  if (close.length) {
+    bubble("bot", "I am not sure I follow. Did you mean one of these?");
+    suggest("", close);
+    return;
+  }
+  const named = (extract(text || "").modules || [])[0] || mentionedModule(text || "");
+  if (named) {
+    bubble("bot", "I know <b>" + esc(featureLabel(named)) + "</b>, but not what you want with "
+      + "it.");
+    suggest("", ["act-run", "how-run-module", "session-chain"]);
+    return;
+  }
+  bubble("bot", PUBLIC
+    ? "I do not know that one. Before you sign in I only cover what this console is."
+    : "I do not know that one. I only cover this console - its modules, its data and its "
+      + "errors.");
+  suggest("I can help with", STARTERS);
 }
 
 /* read one slot's answer out of a typed reply */
@@ -1847,8 +2250,21 @@ function start() {
   try { seen = localStorage.getItem(SEEN_KEY); } catch (error) { /* storage blocked */ }
   if (seen) dock.classList.remove("has-news");
 
-  /* KonaRelay notices when a Run All finishes - that is the moment someone actually wants to be
-     asked "now what?", so he offers the next step instead of waiting to be opened. */
+  window.KonaRelay = { open: show, close: close, ask: askFreeText, tease: showTease };
+  window.KonaChip = window.KonaRelay;        /* the name it shipped under first */
+
+  /* speak first, once - the way a chat widget introduces itself */
+  if (!teaseSeen()) setTimeout(showTease, TEASE_AFTER_MS);
+
+  /* Before sign-in there is no console to watch and no run to report on - but there is time
+     to kill, so that is where the flying happens. */
+  if (PUBLIC) {
+    watchForQuiet();
+    return;
+  }
+
+  /* KonaRelay notices when a Run All finishes - that is the moment someone actually wants to
+     be asked "now what?", so it offers the next step instead of waiting to be opened. */
   window.addEventListener("kona:runfinished", (event) => {
     const detail = (event && event.detail) || {};
     const line = detail.cancelled ? "Your run was cancelled part way through."
@@ -1860,14 +2276,9 @@ function start() {
     }
     bubble("bot", line + " What next?");
     suggest("You might ask next",
-      detail.ok ? ["records", "my-numbers", "pick-modules"] : ["last-run", "read-response", "error-003-027"]);
+      detail.ok ? ["act-users", "act-counts", "act-cards"]
+        : ["act-runs", "read-response", "error-003-027"]);
   });
-
-  /* speak first, once - the way a chat widget introduces itself */
-  if (!teaseSeen()) setTimeout(showTease, TEASE_AFTER_MS);
-
-  window.KonaRelay = { open: show, close: close, ask: askFreeText, tease: showTease };
-  window.KonaChip = window.KonaRelay;        /* the name it shipped under first */
 }
 
 if (document.readyState === "loading") {

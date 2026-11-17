@@ -32,6 +32,8 @@
 .chipmate:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:12px}
 .chipdock.is-dragging .chipmate{animation:none;transform:scale(1.04)}
 .chipdock.is-open .chipmate{animation:none;transform:scale(.94)}
+/* no room anywhere clear of the panel - wait it out rather than sit behind it */
+.chipdock.is-tucked{opacity:0;pointer-events:none}
 
 /* a ring that pings until Chip has been opened once */
 .chipmate::after{
@@ -69,6 +71,36 @@
 .chipdock.is-thinking .chipmate__eye{animation:relayScan 1.1s ease-in-out infinite}
 .chipdock.is-open .chipmate__arm--r{transform:rotate(18deg)}
 
+/* ------------------------------------------------------------ the flight */
+/* Left alone on the sign-in page, it goes for a fly: thrusters lit, a loop out and back, and
+   down again the moment you move the mouse or touch a key. */
+.chipmate__flame{opacity:0;transform-box:fill-box;transform-origin:top center}
+.chipdock.is-flying .chipmate{
+  animation:relayFly 7.5s ease-in-out infinite;transition:none;
+}
+.chipdock.is-flying .chipmate__flame{opacity:1;animation:relayFlame .18s ease-in-out infinite alternate}
+.chipdock.is-flying .chipmate__shadow{opacity:0}
+.chipdock.is-flying .chipmate__arm--l{transform:rotate(-38deg)}
+.chipdock.is-flying .chipmate__arm--r{transform:rotate(38deg)}
+
+@keyframes relayFly{
+  0%{transform:translate(0,0) rotate(0)}
+  10%{transform:translate(-8px,-46px) rotate(-7deg)}
+  28%{transform:translate(-104px,-126px) rotate(-15deg)}
+  46%{transform:translate(-156px,-74px) rotate(7deg)}
+  64%{transform:translate(-96px,-132px) rotate(-9deg)}
+  84%{transform:translate(-18px,-44px) rotate(6deg)}
+  100%{transform:translate(0,0) rotate(0)}
+}
+@keyframes relayFlame{
+  from{transform:scaleY(.7) scaleX(.9);opacity:.75}
+  to{transform:scaleY(1.25) scaleX(1.05);opacity:1}
+}
+@media (prefers-reduced-motion:reduce){
+  .chipdock.is-flying .chipmate,.chipdock.is-flying .chipmate__flame{animation:none}
+  .chipdock.is-flying .chipmate__flame{opacity:0}
+}
+
 @keyframes chipBob{
   0%,100%{transform:translateY(0)}
   50%{transform:translateY(-6px)}
@@ -102,10 +134,14 @@
 
 /* ------------------------------------------------------------- the chat sheet */
 /* Docked to the bottom-right above Relay, the way a support widget opens. */
+/* The size is fixed, the position is not: placePanel() in assistant.js works out where it can
+   sit so that it is always this tall, wherever the mascot has been parked. These values are the
+   starting point and the fallback if that script never runs. */
 .chipchat{
   position:fixed;right:var(--chip-right,22px);bottom:calc(var(--chip-bottom,20px) + 118px);
   z-index:71;
-  width:min(380px,calc(100vw - 44px));height:min(560px,calc(100vh - 160px));
+  width:min(380px,calc(100vw - 44px));
+  height:min(560px,calc(100vh - 48px));
   display:flex;flex-direction:column;overflow:hidden;
   background:var(--surface);border:1px solid var(--line);border-radius:16px;
   box-shadow:0 24px 60px var(--shadow-strong),0 0 0 1px var(--shadow);
@@ -115,7 +151,8 @@
 .chipchat[hidden]{display:none}
 /* the expand control doubles the room without leaving the corner */
 .chipchat.is-big{
-  width:min(620px,calc(100vw - 44px));height:min(820px,calc(100vh - 150px));
+  width:min(620px,calc(100vw - 44px));
+  height:min(820px,calc(100vh - 48px));
 }
 @keyframes chipOpen{
   from{opacity:0;transform:translateY(18px) scale(.94)}
@@ -192,10 +229,21 @@
 
 /* ------------------------------------------------------------------ messages */
 .chipmsg{max-width:94%;font-size:12.9px;line-height:1.62}
-/* a reply is the mark plus its bubble */
-.chiprow{display:flex;align-items:flex-end;gap:8px;align-self:flex-start;max-width:97%}
+/* each side of the conversation is a face plus a bubble */
+.chiprow{display:flex;align-items:flex-end;gap:8px;max-width:97%}
+.chiprow--bot{align-self:flex-start}
+.chiprow--me{align-self:flex-end}
 .chipface{width:23px;height:23px;flex:0 0 auto;margin-bottom:2px;opacity:.95}
-.chiprow .chipmsg--bot{max-width:none}
+/* yours is a plain mark in a soft circle, so it never competes with KonaRelay's */
+.chipface--me{
+  display:flex;align-items:center;justify-content:center;padding:4px;border-radius:50%;
+  background:var(--surface-3);border:1px solid var(--line);color:var(--accent);opacity:1;
+}
+/* the initial of whoever is signed in, in the same circle */
+.chipface__letter{
+  font-size:11.5px;font-weight:800;line-height:1;color:var(--accent-ink);letter-spacing:.2px;
+}
+.chiprow .chipmsg{max-width:none}
 /* the chips and the reasoning block line up under the bubble, not under the face */
 .chipsuggest,.chipthink{margin-left:31px}
 .chipmsg--bot{

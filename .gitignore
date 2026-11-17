@@ -12,3 +12,5 @@ __pycache__/
 *.pyc
 .vscode/
 .claude/
+users.json
+users.json.tmp

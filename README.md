@@ -61,7 +61,10 @@ never used. If a project has no ACTIVE OASL key the tool falls back to the first
 says so in the note under the field.
 
 The project is remembered **per affiliate × version**, so Burger King V1 and V2 can point at
-different projects, and it survives a reload. **Save target to config** writes it into
+different projects, and it survives a reload. A **new sign-in starts clean**: every Project box
+shows its placeholder until something is picked and loaded, on all module pages and on Run All.
+With none loaded the ASP ID, access key and `serviceId` come from `config.json`, exactly as they
+always have. **Save target to config** writes it into
 `cardSource.projectsByTarget` so colleagues get it too. Load nothing and everything behaves exactly
 as before, from `config.json`.
 
@@ -190,6 +193,60 @@ Normally you never type these — opening the module fills them from the portal.
 > (`6167e69-198ef80d…`). It works, but so do both version keys — tested against all three — so the
 > tool uses the selected version's key like every other step.
 
+## Signing in
+
+The console is behind an account. On first open you land on **`login.html`**, which offers
+**Create account** when no account exists yet - the first one made is the owner of that copy.
+
+| | |
+|---|---|
+| Passwords | PBKDF2-HMAC-SHA256, 240,000 rounds, a random salt per user. The password is never stored and cannot be read back; `users.json` holds only the hash, and it is git-ignored |
+| Wrong password vs unknown user | the same message, and the same work done either way, so the page cannot be used to find out who has an account |
+| Sessions | a random 32-byte token held server-side, valid 12 hours, sent back as `X-Kona-Session` |
+| What is protected | **every** endpoint except the four `/api/auth/*` ones. The check sits in the request dispatcher, not in each handler, so a new endpoint is protected by default |
+| What a stranger can learn | only whether any account exists - `/api/auth/me` returns nothing else |
+
+Who you are signed in as sits in the **top right**, next to the light/dark switch: a circle with
+your initial, your name, and the way out. In KonaRelay your own messages carry that same initial,
+so the thread shows who said what. A stale token
+sends you back to the gate rather than showing an empty console.
+
+**The gate is the server, not the page.** The redirect in `app.js` is convenience; the thing
+that actually refuses is the 401 from the dispatcher. Calling `/api/bootstrap` by hand without a
+token returns `Sign in to use this.` - and `bootstrap` is where the access keys live.
+
+### KonaRelay on the sign-in page
+
+**Left alone, it flies.** After nine seconds with no mouse, key or touch on the sign-in page,
+KonaRelay lights its thrusters, drops its shadow, throws its arms back and loops out and back on
+a 7.5-second arc. The first sign of life lands it again, and opening the panel lands it
+immediately. Only on the sign-in page - in the console there is work going on and a mascot doing
+loops would be in the way. `prefers-reduced-motion` turns it off.
+
+The sign-in page is two columns: the pitch on the left - the mark, a headline and three
+lines with icons (chained links, a card with its chip, a saved record ticked) - and the sign-in
+card on the right, with KonaRelay standing between them.
+
+**The mascot wears the theme.** Every colour in it is one of the console's own variables,
+written as a style property because SVG presentation attributes do not read `var()`. Change the
+accent in the Theme menu, or switch to dark, and it repaints with everything else. Only the EMV
+chip stays gold, because that is what a chip is.
+
+On the sign-in page KonaRelay stands **off the right edge of the sign-in card**, level with its
+middle. On a narrower window there is no room there, so it steps into the gap between the two
+columns, and only then to the corner - it is never cut off and never on top of the card.
+It is placed level with its middle - measured
+from the card itself, so it follows the layout and stays put as the window is resized. Drag it
+anywhere you like and that spot is remembered; the two pages keep **separate** spots, so moving
+it on the sign-in page never shifts the one in the console, which keeps its corner.
+
+The assistant is on the login page too, in **public mode**: `login.html` carries
+`data-relay="public"`, which swaps its knowledge for six written answers - what the console is,
+how it works, why not Postman, whether you need an account, where your password goes, and what it
+is. In that mode it has **no actions at all** and no bridge to the console, so there is nothing
+for it to run and nothing to read. The public answers name no project, no ASP, no key, no host
+and no count, and they only link to each other.
+
 ## Run
 
 ```powershell
@@ -262,6 +319,31 @@ What Live Server buys you is hot reload while editing `web/styles.css` / `web/ap
 testing, `python server.py` alone is simpler — it serves the same page on 8770.
 
 ## The screens
+
+**Appearance** — the **Theme** button in the top bar opens a small menu with two modes:
+
+| | |
+|---|---|
+| **Default** | the palette the console ships with. It writes nothing of its own; the stylesheet decides |
+| **Customised** | your own accent colour (eight presets or any colour you pick), font (System / Grotesk / Serif / Mono) and button shape (Rounded / Pill / Square) |
+
+Customising writes a handful of CSS variables onto `<html>`, which is all the rest of the
+stylesheet reads — so one colour repaints every button, link, focus ring, chip and badge, in
+light and dark alike, with no second set of rules anywhere. The choice is remembered, and the
+font and button shape are applied by the no-flash script in the page head so there is no flicker
+on load.
+
+**Nothing you choose can make text unreadable.** The shades are not guessed: the link colour is
+darkened (or lightened, in dark mode) a step at a time until it measures **4.6:1** against the
+surface, the button fill is pushed until either white or near-black clears 4.6:1 on it, and
+whichever of those two wins becomes the label colour. Checked across all eight presets and
+awkward picks like pure yellow and near-black, in both themes: **0 failures**.
+
+**The default palette** is taken from installonair.com: their brand blue `#149FFF` with the
+`#39BFD3` cyan second, on their near-white ground (`#FBFBFB`, `#C8DADF` lines, `#0F3C4B` text).
+Two deliberate departures, both for readability: light-mode text and button fills use a deeper
+shade of the same blue, because white on `#149FFF` is 2.8:1. The brand colour itself is kept for
+glows, rings and focus, and in dark mode it carries near-black text at 6.5:1.
 
 **Dark mode** — the toggle sits at the right of the top bar. On first visit it follows your OS
 setting and keeps following it while you change that; clicking the toggle pins your choice in
@@ -421,7 +503,16 @@ down one edge; the spot is remembered, and the panel opens from wherever it is s
 read the same `--chip-right` / `--chip-bottom` on `<html>`, so there is one source of truth).
 
 Its panel opens above it: round avatar, name, live status dot, an expand control that doubles the
-panel, and a close. The composer is one rounded field - a mark on the left, the text box, a round
+panel, and a close. **The panel is the same size wherever the mascot stands** - 560px tall, or as
+much of that as the window allows. Sitting above the mascot is a preference, not a rule: dragged
+to the middle or the top there is no room above, so the panel slides down until it fits, and
+overlaps the mascot rather than shrinking into a letterbox. It travels with the mascot while you
+drag, and re-fits when the window is resized.
+
+**Opening it moves the mascot out from behind it** - down to the panel's bottom-right corner,
+where it stays visible and is still what you click to close. Closing puts it back exactly where
+you left it. The panel is always measured from that parked spot rather than from wherever the
+mascot is standing at the moment, so opening cannot chase it across the screen. The composer is one rounded field - a mark on the left, the text box, a round
 send button. It pings until it has been opened once, and again whenever a Run All finishes.
 
 **KonaRelay** is named for what the console does: hand the value from each call to the next one. It is an *agent* over this tool's own knowledge and controls - not a language model.
@@ -435,13 +526,26 @@ needs:
 
 | Action | Asks for | Does |
 |---|---|---|
-| Run a flow | affiliate, version, project, modules, card type | drives the Run All page and reports the result |
-| How many cards are free | affiliate, version, project | per-service counts from the portal: total, ACTIVE, free |
+| Run a flow for me | affiliate, version, project, modules, card type | drives the Run All page and reports the result |
+| **Find the ASP ID** | affiliate, project | loads that project and shows its ASP ID, project ID and service count |
+| **Access key for this project** | affiliate, project | the ACTIVE OASL key, and what OMCS is |
+| **Service IDs** | affiliate, project | every card service with its name |
+| **Active / free cards** | affiliate, version, project | per service: how many are free, and the next card numbers up |
+| **Used / terminated cards** | affiliate, version, project | what this tool has already sent, and what the portal no longer lists as ACTIVE - counted separately, because they are different things |
 | List the projects | affiliate | that affiliate's portal projects |
-| List a project's service IDs | affiliate, version, project | loads it and lists the services with names |
 | List the users I created | - | the latest users with their card status |
-| Give me the counts | - | users, applied, physical, virtual, broken down per target |
+| Give me the counts | - | users, applied, physical, virtual, per target |
 | List my recent runs | - | the last calls with module, target and HTTP status |
+
+The five project questions share one lookup: pick the affiliate, pick the project, and the portal
+is read once - a second question about the same project reuses what is already loaded. Each one
+hands on to the questions that usually follow it and never back to itself:
+
+```
+Find the ASP ID  ->  Access key  ->  Service IDs  ->  Active / free cards  ->  Run a flow
+                                          \                                                              \                   ->  Used / terminated cards
+                                            ->  Used / terminated  ->  Error 003_027
+```
 
 **Plain instructions work.** KonaRelay reads the module out of how people actually say it, not just
 from its exact label:
@@ -480,6 +584,19 @@ the one that decides whether the next Card Registration can run.
 beside the mark offering what it can do, dismissible and shown only once ever. Every reply carries
 the mark beside it, so an answer reads as coming from someone, and the panel header shows a live
 status dot. The mark itself stays where you put it: in its reader slot on the right edge, draggable.
+
+**When it does not know, it says so in one line.** Three cases, three short answers:
+
+| | |
+|---|---|
+| Something close | *"I am not sure I follow. Did you mean one of these?"* with the nearest two or three |
+| A module named, no verb - *"bank account"* | *"I know Bank Account Registration, but not what you want with it."* |
+| Nothing at all - *"tell me a joke"* | *"I do not know that one. I only cover this console - its modules, its data and its errors."* and the chips for what it does cover |
+
+Confidence is measured on the words alone, before the ranking nudges, and a weak score only
+counts when it accounts for the **whole** question. That is what stops *"who won the match"* being
+answered with a list of users because it happens to contain "who": one stray word out of three is
+an offer, not an answer.
 
 **It shows its reasoning.** Every answer carries a collapsible **Thinking** block, in the shape
 Claude and ChatGPT use: it fills while the work happens and folds away with the time it took and
@@ -758,6 +875,11 @@ take it.
 ```
 server.py              local web server + JSON API (send proxy, randomize, config, history)
 .vscode/settings.json  Live Server config (root = web/, port 5500, ignores history & *.py)
+web/appearance.js      the Theme menu: presets, derived shades, the contrast fitting
+web/appearance.css     that menu's styling
+web/login.html         the sign-in page, with KonaRelay in public mode
+web/login.js           sign in / create account, and the token every later call carries
+core/auth.py           accounts and sessions: hashing, verification, token lifetime
 web/index.html         the console
 web/flowchart.js       the How It Works diagrams: SVG builders plus the stage director
 web/flowchart.css      diagram styling, all of it theme tokens so dark mode needs no second set
